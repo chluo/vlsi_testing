@@ -10,8 +10,7 @@
 
 #define compute_INV(result,val) \
   { \
-    int temp = (~val & ~(val >> 1)) & BIT0_MASK; \
-    result = ~((temp | (temp << 1)) | val); \
+    result = ((val >> 1) & BIT0_MASK) | ((val << 1) & BIT1_MASK); \
   }
 
 #define compute_AND(result,val1,val2) \
@@ -88,6 +87,8 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
   int          j; 
   fault_list_t *fptr, *prev_fptr;
   int          detected_flag;
+
+  /* printf("%d\n", sizeof(long long)); */
 
   /*************************/
   /* fault-free simulation */
