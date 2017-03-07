@@ -128,41 +128,41 @@ void Add_Gate(const Gate_Info_t * GateInfo ){
     ListNodeIter = ListNodeStart ;
     while ( ListNodeIter != NULL ){
       if ( strcmp( ListNodeIter->NodeName, GateInfo->NameOfNode[i] ) == 0 ){
-	ListGateIter=ListNodeIter->GateStart;
-	ListNodeIter->GateStart = ListGateCurr;
-	ListGateCurr->next = ListGateIter;
-	while ( ListGateIter != NULL ){
-	  if ( CurrNodeType == ListGateIter->NodeType) {
-	    ListGateIter = ListGateIter->next;
-	    continue;
-	  }
-	  TmpGateStruct=ListGateIter->GateStruct;
-	  if ( CurrNodeType == NodeIn){
-	    CurrGateStruct->FaninStruct =
-	      (Gate_Struct_t**) reallocm(CurrGateStruct->FaninStruct,
-		     (CurrGateStruct->NumOfFanin+1)*sizeof( Gate_Struct_t *));
-	    CurrGateStruct->FaninStruct[CurrGateStruct->NumOfFanin++] = 
-	      TmpGateStruct;
-	    TmpGateStruct->FanoutStruct =
-	      (Gate_Struct_t**) reallocm(TmpGateStruct->FanoutStruct,
-		     (TmpGateStruct->NumOfFanout+1)*sizeof( Gate_Struct_t* ));
-	    TmpGateStruct->FanoutStruct[TmpGateStruct->NumOfFanout++]=
-	      CurrGateStruct;
-	  }else {
-	    CurrGateStruct->FanoutStruct =
-	      (Gate_Struct_t**) reallocm(CurrGateStruct->FanoutStruct,
-		     (CurrGateStruct->NumOfFanout+1)*sizeof( Gate_Struct_t *));
-	    CurrGateStruct->FanoutStruct[CurrGateStruct->NumOfFanout++] = 
-	      TmpGateStruct;
-	    TmpGateStruct->FaninStruct =
-	      (Gate_Struct_t**)reallocm(TmpGateStruct->FaninStruct ,
-		     (TmpGateStruct->NumOfFanin+1)*sizeof(Gate_Struct_t *));
-	    TmpGateStruct->FaninStruct[TmpGateStruct->NumOfFanin++]=
-	      CurrGateStruct;
-	  }
-	  ListGateIter = ListGateIter->next;
-	}
-	break;
+	    ListGateIter=ListNodeIter->GateStart;
+	    ListNodeIter->GateStart = ListGateCurr;
+	    ListGateCurr->next = ListGateIter;
+	    while ( ListGateIter != NULL ){
+	      if ( CurrNodeType == ListGateIter->NodeType) {
+	        ListGateIter = ListGateIter->next;
+	        continue;
+	      }
+	      TmpGateStruct=ListGateIter->GateStruct;
+	      if ( CurrNodeType == NodeIn){
+	        CurrGateStruct->FaninStruct =
+	          (Gate_Struct_t**) reallocm(CurrGateStruct->FaninStruct,
+	    	     (CurrGateStruct->NumOfFanin+1)*sizeof( Gate_Struct_t *));
+	        CurrGateStruct->FaninStruct[CurrGateStruct->NumOfFanin++] = 
+	          TmpGateStruct;
+	        TmpGateStruct->FanoutStruct =
+	          (Gate_Struct_t**) reallocm(TmpGateStruct->FanoutStruct,
+	    	     (TmpGateStruct->NumOfFanout+1)*sizeof( Gate_Struct_t* ));
+	        TmpGateStruct->FanoutStruct[TmpGateStruct->NumOfFanout++]=
+	          CurrGateStruct;
+	      }else {
+	        CurrGateStruct->FanoutStruct =
+	          (Gate_Struct_t**) reallocm(CurrGateStruct->FanoutStruct,
+	    	     (CurrGateStruct->NumOfFanout+1)*sizeof( Gate_Struct_t *));
+	        CurrGateStruct->FanoutStruct[CurrGateStruct->NumOfFanout++] = 
+	          TmpGateStruct;
+	        TmpGateStruct->FaninStruct =
+	          (Gate_Struct_t**)reallocm(TmpGateStruct->FaninStruct ,
+	    	     (TmpGateStruct->NumOfFanin+1)*sizeof(Gate_Struct_t *));
+	        TmpGateStruct->FaninStruct[TmpGateStruct->NumOfFanin++]=
+	          CurrGateStruct;
+	      }
+	      ListGateIter = ListGateIter->next;
+	    }
+	    break;
       }
       ListNodeIter = ListNodeIter->next;
     }

@@ -3,25 +3,23 @@
 #define TRUE  1
 #define FALSE 0
 
-#define LOGIC_0  0
-#define LOGIC_1  1
-#define LOGIC_X  2
-
 #define MAX_GATE_FANIN   2
 #define MAX_PATTERNS     100000
 #define MAX_GATES	 100000
 #define MAX_PO		 2000
 #define MAX_PI		 2000
 #define MAX_FAULTS	 1000000
-
 #define WORD_SIZE 32
 
 /* signal values */
+/* Both 0b00 and 0b11 are considered as X */
+#define UNDEFINED   3
+#define LOGIC_0     1
+#define LOGIC_1     2
+#define LOGIC_X     0
 
-#define UNDEFINED   -1
-#define LOGIC_0     0
-#define LOGIC_1     1
-#define LOGIC_X     2
+/* Number of patterns run in parallel */ 
+#define N_PARA      16
 
 /* Data Structures */
 
@@ -49,17 +47,20 @@ struct fault_list_struct {
   int input_index;       /* (== -1) if fault at gate output */
                          /* (>= 0)  points to gate input where the fault is */
   stuck_val_t type;      /* type of stuck-at fault */
-  fault_list_t *next;    /* next gate in list (NULL ptr if end of list) */
+  fault_list_t *next;    /* next fault in list (NULL ptr if end of list) */
 };
 
 typedef struct gate_struct gate_t;
 struct gate_struct {
   char *name;
-  int index;                  /* set equal to index in ckt.gate[id] array */
-  gate_type_t type;           /* type of gate */
-  int fanin[MAX_GATE_FANIN];  /* array of indices of fanin gates */
-  int num_fanout;             /* number of fanout's */
-  int *fanout;                /* array of indices of fanout gates */
+  int index;                      /* set equal to index in ckt.gate[id] array */
+  gate_type_t type;               /* type of gate */
+  int fanin[MAX_GATE_FANIN];      /* array of indices of fanin gates */
+  int num_fanout;                 /* number of fanout's */
+  int *fanout;                    /* array of indices of fanout gates */
+  int in_val[MAX_GATE_FANIN];     /* store input values of gate for N_PARA patterns */
+  int out_val;                    /* store output value of gate for N_PARA patterns */
+  int out_val_fault_free; 
 };
 
 typedef struct circuit_struct circuit_t;

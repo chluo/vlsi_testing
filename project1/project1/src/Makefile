@@ -18,7 +18,7 @@ YACC			= yacc
 DEBUG_FLAGS		= $(DEBUG_NETLIST) $(YACCDEBUG) $(DEBUG_BUILD_CKT) $(DEBUG_MESSAGES) $(DEBUG_MODE)
 
 CFLAGS			= -O $(INCLUDE) -DSIS
-LIBS			= -lm -ll
+LIBS			= -lm -ll 
 
 CC			= gcc
 TARGET			= 3fsim
