@@ -12,7 +12,6 @@
 #define WORD_SIZE 32
 
 /* signal values */
-/* Both 0b00 and 0b11 are considered as X */
 #define UNDEFINED   3
 #define LOGIC_0     1
 #define LOGIC_1     2

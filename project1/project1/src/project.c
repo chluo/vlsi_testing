@@ -10,7 +10,8 @@
 
 #define compute_INV(result,val) \
   { \
-    result = ~val; \
+    int temp = (~val & ~(val >> 1)) & BIT0_MASK; \
+    result = ~((temp | (temp << 1)) | val); \
   }
 
 #define compute_AND(result,val1,val2) \
@@ -20,25 +21,11 @@
              ((val1 & BIT1_MASK) & (val2 & BIT1_MASK)) ;\
   } 
 
-#define compute_NAND(result,val1,val2) \
-  { \
-    result = ((~val1 & BIT0_MASK) & (~val2 & BIT0_MASK))  \
-             | \
-             ((~val1 & BIT1_MASK) | (~val2 & BIT1_MASK)) ;\
-  } 
-
 #define compute_OR(result,val1,val2) \
   { \
     result = ((val1 & BIT0_MASK) & (val2 & BIT0_MASK))  \
              | \
              ((val1 & BIT1_MASK) | (val2 & BIT1_MASK)) ;\
-  }
-
-#define compute_NOR(result,val1,val2) \
-  { \
-    result = ((~val1 & BIT0_MASK) | (~val2 & BIT0_MASK))  \
-             | \
-             ((~val1 & BIT1_MASK) & (~val2 & BIT1_MASK)) ;\
   }
 
 #define evaluate(gate) \
@@ -63,13 +50,15 @@
       compute_AND(gate.out_val,gate.in_val[0],gate.in_val[1]); \
       break; \
     case NAND: \
-      compute_NAND(gate.out_val,gate.in_val[0],gate.in_val[1]); \
+      compute_AND(gate.out_val,gate.in_val[0],gate.in_val[1]); \
+      compute_INV(gate.out_val,gate.out_val); \
       break; \
     case OR: \
       compute_OR(gate.out_val,gate.in_val[0],gate.in_val[1]); \
       break; \
     case NOR: \
-      compute_NOR(gate.out_val,gate.in_val[0],gate.in_val[1]); \
+      compute_OR(gate.out_val,gate.in_val[0],gate.in_val[1]); \
+      compute_INV(gate.out_val,gate.out_val); \
       break; \
     default: \
       assert(0); \
@@ -104,17 +93,20 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
   /* fault-free simulation */
   /*************************/
   /* loop through all pattern groups (N_PARA patterns per group) */
-  for (p = 0; p < (pat->len / N_PARA) + 1; p += N_PARA) {
+  for (p = 0; p < pat->len; p += N_PARA) {
+    /* printf("pattern #%d\n", p); */
     /* initialize all gate values to UNDEFINED */
     for (i = 0; i < ckt->ngates; i++) {
-      ckt->gate[i].in_val[0] = ~0;
-      ckt->gate[i].in_val[1] = ~0;
-      ckt->gate[i].out_val   = ~0;
+      ckt->gate[i].in_val[0] = 0;
+      ckt->gate[i].in_val[1] = 0;
+      ckt->gate[i].out_val   = 0;
     }
     /* assign primary input values for pattern */ 
     for (i = 0; i < ckt->npi; i++) {
-      for (j = 0; j < N_PARA && p + j < pat->len; j++) 
-        ckt->gate[ckt->pi[i]].out_val = (pat->in[p + j][i] & 3) << (2 * j);
+      for (j = 0; j < N_PARA && p + j < pat->len; j++) {
+        ckt->gate[ckt->pi[i]].out_val |= ((pat->in[p + j][i] & 3) == 0 ? LOGIC_0 : (pat->in[p + j][i] & 3) == 1 ? LOGIC_1 : LOGIC_X) << (2 * j);
+      }
+      /* printf ("pattern: %x\n", ckt->gate[ckt->pi[i]].out_val); */
     }
     /* evaluate all gates */
     for (i = 0; i < ckt->ngates; i++) {
@@ -162,17 +154,17 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
   for (fptr=undetected_flist; fptr != (fault_list_t *)NULL; fptr=fptr->next) {
     /* loop through all pattern groups (N_PARA patterns per group) */
     detected_flag = FALSE;
-    for (p = 0; p < (pat->len / N_PARA) + 1 && !detected_flag; p += N_PARA) {
+    for (p = 0; p < pat->len && !detected_flag; p += N_PARA) {
       /* initialize all gate values to UNDEFINED */
       for (i = 0; i < ckt->ngates; i++) {
-        ckt->gate[i].in_val[0] = ~0;
-        ckt->gate[i].in_val[1] = ~0;
-        ckt->gate[i].out_val   = ~0;
+        ckt->gate[i].in_val[0] = 0;
+        ckt->gate[i].in_val[1] = 0;
+        ckt->gate[i].out_val   = 0;
       }
       /* assign primary input values for pattern */ 
       for (i = 0; i < ckt->npi; i++) {
         for (j = 0; j < N_PARA && p + j < pat->len; j++) 
-          ckt->gate[ckt->pi[i]].out_val = (pat->in[p + j][i] & 3) << (2 * j);
+          ckt->gate[ckt->pi[i]].out_val |= ((pat->in[p + j][i] & 3) == 0 ? LOGIC_0 : (pat->in[p + j][i] & 3) == 1 ? LOGIC_1 : LOGIC_X) << (2 * j);
       }
       /* evaluate all gates */
       for (i = 0; i < ckt->ngates; i++) {
@@ -233,12 +225,19 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
       /* check if fault detected */
       for (i = 0; i < ckt->npo; i++) {
         for (j = 0; j < N_PARA && p + j < pat->len; j++) {
-          if ( ((ckt->gate[ckt->po[i]].out_val >> (2 * j)) & 3 == LOGIC_0) && ( pat->out[p + j][i] == 1) )
+          /* printf ("%d, %d\n", (ckt->gate[ckt->po[i]].out_val >> (2 * j)) & 3, pat->out[p + j][i]); */
+          if ( (((ckt->gate[ckt->po[i]].out_val >> (2 * j)) & 3) == LOGIC_0) && ( pat->out[p + j][i] == 1 ) ) {
             detected_flag = TRUE;             
-          if ( ((ckt->gate[ckt->po[i]].out_val >> (2 * j)) & 3 == LOGIC_1) && ( pat->out[p + j][i] == 0) )
+            break; 
+          }
+          if ( (((ckt->gate[ckt->po[i]].out_val >> (2 * j)) & 3) == LOGIC_1) && ( pat->out[p + j][i] == 0 ) ) {
             detected_flag = TRUE;
+            break; 
+          }
         }
+        if (detected_flag) break; 
       }
+      if (detected_flag) break; 
     }
     /* fault dropping */ 
     if ( detected_flag ) {
