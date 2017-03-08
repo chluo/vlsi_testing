@@ -10,7 +10,7 @@
 
 #define compute_INV(result,val) \
   { \
-    result = ((val >> 1) & BIT0_MASK) | ((val << 1) & BIT1_MASK); \
+    result = ((val / 2) & BIT0_MASK) | ((val * 2) & BIT1_MASK); \
   }
 
 #define compute_AND(result,val1,val2) \
@@ -112,7 +112,7 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
       /* printf("%x\n", ckt->gate[ckt->pi[i]].out_val); */
       ckt->gate[ckt->pi[i]].out_val = 0; 
       for (j = 0; j < N_PARA && p + j < pat->len; j++) {
-        ckt->gate[ckt->pi[i]].out_val |= (((pat->in[p + j][i] & 3) == 0) ? LOGIC_0 : ((pat->in[p + j][i] & 3) == 1) ? LOGIC_1 : LOGIC_X) << (2 * j);
+        ckt->gate[ckt->pi[i]].out_val |= ((pat->in[p + j][i] == 0) ? LOGIC_0 : (pat->in[p + j][i] == 1) ? LOGIC_1 : LOGIC_X) << (2 * j);
       }
       /* printf ("pattern: %x\n", ckt->gate[ckt->pi[i]].out_val); */
     }
@@ -184,7 +184,7 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
       for (i = 0; i < ckt->npi; i++) {
         ckt->gate[ckt->pi[i]].out_val = 0; 
         for (j = 0; j < N_PARA && p + j < pat->len; j++) 
-          ckt->gate[ckt->pi[i]].out_val |= ((pat->in[p + j][i] & 3) == 0 ? LOGIC_0 : (pat->in[p + j][i] & 3) == 1 ? LOGIC_1 : LOGIC_X) << (2 * j);
+          ckt->gate[ckt->pi[i]].out_val |= ((pat->in[p + j][i] == 0) ? LOGIC_0 : (pat->in[p + j][i] == 1) ? LOGIC_1 : LOGIC_X) << (2 * j);
       }
       /* evaluate all gates */
       for (i = 0; i < ckt->ngates; i++) {
@@ -241,14 +241,9 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
       /* check if fault detected */
       for (i = 0; i < ckt->npo; i++) {
         for (j = 0; j < N_PARA && p + j < pat->len; j++) {
-          /* printf ("%d, %d\n", (ckt->gate[ckt->po[i]].out_val >> (2 * j)) & 3, pat->out[p + j][i]); */
-          if ( (((ckt->gate[ckt->po[i]].out_val >> (2 * j)) & 3) == LOGIC_0) && ( pat->out[p + j][i] == 1 ) ) {
-            detected_flag = TRUE;             
-            break; 
-          }
-          if ( (((ckt->gate[ckt->po[i]].out_val >> (2 * j)) & 3) == LOGIC_1) && ( pat->out[p + j][i] == 0 ) ) {
-            detected_flag = TRUE;
-            break; 
+          if ( (((ckt->gate[ckt->po[i]].out_val >> (2 * j)) & 3) == LOGIC_0) && ( pat->out[p + j][i] == 1 )  
+            || (((ckt->gate[ckt->po[i]].out_val >> (2 * j)) & 3) == LOGIC_1) && ( pat->out[p + j][i] == 0 ) ) {
+            detected_flag = TRUE; break; 
           }
         }
         if (detected_flag) break; 

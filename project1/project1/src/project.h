@@ -52,13 +52,13 @@ struct fault_list_struct {
 typedef struct gate_struct gate_t;
 struct gate_struct {
   char *name;
-  int index;                      /* set equal to index in ckt.gate[id] array */
-  gate_type_t type;               /* type of gate */
-  int fanin[MAX_GATE_FANIN];      /* array of indices of fanin gates */
-  int num_fanout;                 /* number of fanout's */
-  int *fanout;                    /* array of indices of fanout gates */
-  unsigned int in_val[MAX_GATE_FANIN];     /* store input values of gate for N_PARA patterns */
-  unsigned int out_val;                    /* store output value of gate for N_PARA patterns */
+  int index;                                            /* set equal to index in ckt.gate[id] array */
+  gate_type_t type;                                     /* type of gate */
+  int fanin[MAX_GATE_FANIN];                            /* array of indices of fanin gates */
+  int num_fanout;                                       /* number of fanout's */
+  int *fanout;                                          /* array of indices of fanout gates */
+  unsigned int in_val[MAX_GATE_FANIN];                  /* store input values of gate for N_PARA patterns */
+  unsigned int out_val;                                 /* store output value of gate for N_PARA patterns */
 };
 
 typedef struct circuit_struct circuit_t;
