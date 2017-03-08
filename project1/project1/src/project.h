@@ -35,8 +35,8 @@ enum gate_type_enum {
 typedef struct pattern_struct pattern_t;
 struct pattern_struct {
   int len;                 /* num. of pattern to be simulated */
-  int *in[MAX_PATTERNS];   /* array of 3 value input patterns */
-  int *out[MAX_PATTERNS];  /* corresponding array of 3 value output patterns */
+  unsigned int *in[MAX_PATTERNS];   /* array of 3 value input patterns */
+  unsigned int *out[MAX_PATTERNS];  /* corresponding array of 3 value output patterns */
 };
 
 typedef struct fault_list_struct fault_list_t;  /* linked list of faults */
@@ -57,8 +57,8 @@ struct gate_struct {
   int fanin[MAX_GATE_FANIN];      /* array of indices of fanin gates */
   int num_fanout;                 /* number of fanout's */
   int *fanout;                    /* array of indices of fanout gates */
-  int in_val[MAX_GATE_FANIN];     /* store input values of gate for N_PARA patterns */
-  int out_val;                    /* store output value of gate for N_PARA patterns */
+  unsigned int in_val[MAX_GATE_FANIN];     /* store input values of gate for N_PARA patterns */
+  unsigned int out_val;                    /* store output value of gate for N_PARA patterns */
 };
 
 typedef struct circuit_struct circuit_t;

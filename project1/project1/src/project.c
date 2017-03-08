@@ -100,15 +100,19 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
     /* printf("# of patterns: %d\n", pat->len); */
     /* printf("# of PIs: %d\n", ckt->npi); */
     /* initialize all gate values to UNDEFINED */
+    /*
     for (i = 0; i < ckt->ngates; i++) {
       ckt->gate[i].in_val[0] = 0;
       ckt->gate[i].in_val[1] = 0;
       ckt->gate[i].out_val   = 0;
     }
+    */
     /* assign primary input values for pattern */ 
     for (i = 0; i < ckt->npi; i++) {
+      /* printf("%x\n", ckt->gate[ckt->pi[i]].out_val); */
+      ckt->gate[ckt->pi[i]].out_val = 0; 
       for (j = 0; j < N_PARA && p + j < pat->len; j++) {
-        ckt->gate[ckt->pi[i]].out_val |= ((pat->in[p + j][i] & 3) == 0 ? LOGIC_0 : (pat->in[p + j][i] & 3) == 1 ? LOGIC_1 : LOGIC_X) << (2 * j);
+        ckt->gate[ckt->pi[i]].out_val |= (((pat->in[p + j][i] & 3) == 0) ? LOGIC_0 : ((pat->in[p + j][i] & 3) == 1) ? LOGIC_1 : LOGIC_X) << (2 * j);
       }
       /* printf ("pattern: %x\n", ckt->gate[ckt->pi[i]].out_val); */
     }
@@ -145,6 +149,13 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
     for (i = 0; i < ckt->npo; i++) {
       for (j = 0; j < N_PARA && p + j < pat->len; j++) {
         /* assert(((ckt->gate[ckt->po[i]].out_val >> (2 * j)) & 3) != 3); */
+        /*
+        if (((ckt->gate[ckt->po[i]].out_val >> (2 * j)) & 3) == 3) {
+          printf("%x\n", ckt->gate[ckt->gate[ckt->gate[ckt->po[i]].fanin[0]].fanin[0]].in_val[0]); 
+          printf("%x\n", ckt->gate[ckt->gate[ckt->gate[ckt->po[i]].fanin[0]].fanin[0]].in_val[1]); 
+          printf("%d\n", ckt->gate[ckt->gate[ckt->gate[ckt->po[i]].fanin[0]].fanin[0]].type); 
+        }
+        */
         pat->out[p + j][i] = ((ckt->gate[ckt->po[i]].out_val >> (2 * j)) & 3) == LOGIC_0 ? 0 :
                              ((ckt->gate[ckt->po[i]].out_val >> (2 * j)) & 3) == LOGIC_1 ? 1 : 2;
       }
@@ -162,13 +173,16 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
     detected_flag = FALSE;
     for (p = 0; p < pat->len && !detected_flag; p += N_PARA) {
       /* initialize all gate values to UNDEFINED */
+      /*
       for (i = 0; i < ckt->ngates; i++) {
         ckt->gate[i].in_val[0] = 0;
         ckt->gate[i].in_val[1] = 0;
         ckt->gate[i].out_val   = 0;
       }
+      */
       /* assign primary input values for pattern */ 
       for (i = 0; i < ckt->npi; i++) {
+        ckt->gate[ckt->pi[i]].out_val = 0; 
         for (j = 0; j < N_PARA && p + j < pat->len; j++) 
           ckt->gate[ckt->pi[i]].out_val |= ((pat->in[p + j][i] & 3) == 0 ? LOGIC_0 : (pat->in[p + j][i] & 3) == 1 ? LOGIC_1 : LOGIC_X) << (2 * j);
       }
