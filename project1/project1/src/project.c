@@ -112,7 +112,7 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
       /* printf("%x\n", ckt->gate[ckt->pi[i]].out_val); */
       ckt->gate[ckt->pi[i]].out_val = 0; 
       for (j = 0; j < N_PARA && p + j < pat->len; j++) {
-        ckt->gate[ckt->pi[i]].out_val |= ((pat->in[p + j][i] == 0) ? LOGIC_0 : (pat->in[p + j][i] == 1) ? LOGIC_1 : LOGIC_X) << (2 * j);
+        ckt->gate[ckt->pi[i]].out_val |= (pat->in[p + j][i] + 1) << (2 * j);
       }
       /* printf ("pattern: %x\n", ckt->gate[ckt->pi[i]].out_val); */
     }
@@ -156,8 +156,7 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
           printf("%d\n", ckt->gate[ckt->gate[ckt->gate[ckt->po[i]].fanin[0]].fanin[0]].type); 
         }
         */
-        pat->out[p + j][i] = ((ckt->gate[ckt->po[i]].out_val >> (2 * j)) & 3) == LOGIC_0 ? 0 :
-                             ((ckt->gate[ckt->po[i]].out_val >> (2 * j)) & 3) == LOGIC_1 ? 1 : 2;
+        pat->out[p + j][i] = ((ckt->gate[ckt->po[i]].out_val >> (2 * j)) & 3) - 1; 
       }
     }
   }
@@ -184,7 +183,7 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
       for (i = 0; i < ckt->npi; i++) {
         ckt->gate[ckt->pi[i]].out_val = 0; 
         for (j = 0; j < N_PARA && p + j < pat->len; j++) 
-          ckt->gate[ckt->pi[i]].out_val |= ((pat->in[p + j][i] == 0) ? LOGIC_0 : (pat->in[p + j][i] == 1) ? LOGIC_1 : LOGIC_X) << (2 * j);
+          ckt->gate[ckt->pi[i]].out_val |= (pat->in[p + j][i] + 1) << (2 * j);
       }
       /* evaluate all gates */
       for (i = 0; i < ckt->ngates; i++) {

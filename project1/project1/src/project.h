@@ -12,10 +12,10 @@
 #define WORD_SIZE 32
 
 /* signal values */
-#define UNDEFINED   3
+#define UNDEFINED   0
 #define LOGIC_0     1
 #define LOGIC_1     2
-#define LOGIC_X     0
+#define LOGIC_X     3
 
 /* Number of patterns run in parallel */ 
 #define N_PARA      16
