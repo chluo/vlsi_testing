@@ -1,0 +1,77 @@
+./3fsim and.blif and.pat and.out
+echo -n 'Simulation errors: '
+diff and.out and.gold.out | wc -l
+
+./3fsim c17.blif c17.pat c17.out
+echo -n 'Simulation errors: '
+diff c17.out c17.gold.out | wc -l
+
+./3fsim c1908.blif c1908.pat c1908.out
+echo -n 'Simulation errors: '
+diff c1908.out c1908.gold.out | wc -l
+
+./3fsim c2670.blif c2670.pat c2670.out
+echo -n 'Simulation errors: '
+diff c2670.out c2670.gold.out | wc -l
+
+# ./3fsim c3540.blif c3540.pat c3540.out
+# echo -n 'Simulation errors: '
+# diff 3540.out 3540.gold.out | wc -l
+
+./3fsim c432.blif c432.pat c432.out
+echo -n 'Simulation errors: '
+diff c432.out c432.gold.out | wc -l
+
+./3fsim c499.blif c499.pat c499.out
+echo -n 'Simulation errors: '
+diff c499.out c499.gold.out | wc -l
+
+# ./3fsim c5315.blif c5315.pat c5315.out
+# echo -n 'Simulation errors: '
+# diff c5315.out c5315.gold.out | wc -l
+
+# ./3fsim c6288.blif c6288.pat c6288.out
+# echo -n 'Simulation errors: '
+# diff c6288.out c6288.gold.out | wc -l
+
+./3fsim c7552.blif c7552.pat c7552.out
+echo -n 'Simulation errors: '
+diff c7552.out c7552.gold.out | wc -l
+
+./3fsim nand.blif nand.pat nand.out
+echo -n 'Simulation errors: '
+diff nand.out nand.gold.out | wc -l
+
+./3fsim nor.blif nor.pat nor.out
+echo -n 'Simulation errors: '
+diff nor.out nor.gold.out | wc -l
+
+./3fsim or.blif or.pat or.out
+echo -n 'Simulation errors: '
+diff or.out or.gold.out | wc -l
+
+./3fsim s13207.blif s13207.pat s13207.out
+echo -n 'Simulation errors: '
+diff s13207.out s13207.gold.out | wc -l
+
+./3fsim s15850.blif s15850.pat s15850.out
+echo -n 'Simulation errors: '
+diff s15850.out s15850.gold.out | wc -l
+
+./3fsim s38417.blif s38417.pat s38417.out
+echo -n 'Simulation errors: '
+diff s38417.out s38417.gold.out | wc -l
+
+# ./3fsim s5378.blif s5378.pat s5378.out
+# echo -n 'Simulation errors: '
+# diff s5378.out s5378.gold.out | wc -l
+
+./3fsim s9234.blif s9234.pat s9234.out
+echo -n 'Simulation errors: '
+diff s9234.out s9234.gold.out | wc -l
+
+./3fsim x2.blif x2.pat x2.out
+echo -n 'Simulation errors: '
+diff x2.out x2.gold.out | wc -l
+
+echo ''
