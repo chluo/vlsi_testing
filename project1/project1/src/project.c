@@ -27,37 +27,37 @@
              ((val1 & BIT1_MASK) | (val2 & BIT1_MASK)) ;\
   }
 
-#define evaluate(gate) \
+#define evaluate(gate_ptr) \
   { \
-    switch( gate.type ) { \
+    switch( gate_ptr->type ) { \
     case PI: \
       break; \
     case PO: \
     case BUF: \
-      gate.out_val = gate.in_val[0]; \
+      gate_ptr->out_val = gate_ptr->in_val[0]; \
       break; \
     case PO_GND: \
-      gate.out_val = BIT0_MASK; \
+      gate_ptr->out_val = BIT0_MASK; \
       break; \
     case PO_VCC: \
-      gate.out_val = BIT1_MASK; \
+      gate_ptr->out_val = BIT1_MASK; \
       break; \
     case INV: \
-      compute_INV(gate.out_val,gate.in_val[0]); \
+      compute_INV(gate_ptr->out_val,gate_ptr->in_val[0]); \
       break; \
     case AND: \
-      compute_AND(gate.out_val,gate.in_val[0],gate.in_val[1]); \
+      compute_AND(gate_ptr->out_val,gate_ptr->in_val[0],gate_ptr->in_val[1]); \
       break; \
     case NAND: \
-      compute_AND(gate.out_val,gate.in_val[0],gate.in_val[1]); \
-      compute_INV(gate.out_val,gate.out_val); \
+      compute_AND(gate_ptr->out_val,gate_ptr->in_val[0],gate_ptr->in_val[1]); \
+      compute_INV(gate_ptr->out_val,gate_ptr->out_val); \
       break; \
     case OR: \
-      compute_OR(gate.out_val,gate.in_val[0],gate.in_val[1]); \
+      compute_OR(gate_ptr->out_val,gate_ptr->in_val[0],gate_ptr->in_val[1]); \
       break; \
     case NOR: \
-      compute_OR(gate.out_val,gate.in_val[0],gate.in_val[1]); \
-      compute_INV(gate.out_val,gate.out_val); \
+      compute_OR(gate_ptr->out_val,gate_ptr->in_val[0],gate_ptr->in_val[1]); \
+      compute_INV(gate_ptr->out_val,gate_ptr->out_val); \
       break; \
     default: \
       assert(0); \
@@ -118,8 +118,9 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
     }
     /* evaluate all gates */
     for (i = 0; i < ckt->ngates; i++) {
+      gate_t *cur_gate = & (ckt->gate[i]); 
       /* get gate input values */
-      switch ( ckt->gate[i].type ) {
+      switch ( cur_gate->type ) {
         /* gates with no input terminal */
         case PI:
         case PO_GND:
@@ -129,21 +130,25 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
         case INV:
         case BUF:
         case PO:
-          ckt->gate[i].in_val[0] = ckt->gate[ckt->gate[i].fanin[0]].out_val;
+          cur_gate->in_val[0] = ckt->gate[cur_gate->fanin[0]].out_val;
           break;
         /* gates with two input terminals */
         case AND:
         case NAND:
         case OR:
         case NOR:
+          cur_gate->in_val[0] = ckt->gate[cur_gate->fanin[0]].out_val;
+          cur_gate->in_val[1] = ckt->gate[cur_gate->fanin[1]].out_val;
+          /*
           ckt->gate[i].in_val[0] = ckt->gate[ckt->gate[i].fanin[0]].out_val;
           ckt->gate[i].in_val[1] = ckt->gate[ckt->gate[i].fanin[1]].out_val;
+          */
           break;
         default:
           assert(0);
       }
       /* compute gate output value */
-      evaluate(ckt->gate[i]);
+      evaluate(cur_gate);
     }
     /* put fault-free primary output values into pat data structure */
     for (i = 0; i < ckt->npo; i++) {
@@ -187,6 +192,7 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
       }
       /* evaluate all gates */
       for (i = 0; i < ckt->ngates; i++) {
+        gate_t *cur_gate = & (ckt->gate[i]); 
         /* get gate input values */
         switch ( ckt->gate[i].type ) {
           /* gates with no input terminal */
@@ -198,15 +204,22 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
           case INV:
           case BUF:
           case PO:
+            cur_gate->in_val[0] = ckt->gate[cur_gate->fanin[0]].out_val;
+            /*
             ckt->gate[i].in_val[0] = ckt->gate[ckt->gate[i].fanin[0]].out_val;
+            */
             break;
           /* gates with two input terminals */
           case AND:
           case NAND:
           case OR:
           case NOR:
+            cur_gate->in_val[0] = ckt->gate[cur_gate->fanin[0]].out_val;
+            cur_gate->in_val[1] = ckt->gate[cur_gate->fanin[1]].out_val;
+            /*
             ckt->gate[i].in_val[0] = ckt->gate[ckt->gate[i].fanin[0]].out_val;
             ckt->gate[i].in_val[1] = ckt->gate[ckt->gate[i].fanin[1]].out_val;
+            */
             break;
           default:
             assert(0);
@@ -217,24 +230,24 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
           if ( fptr->input_index >= 0 ) {
             /* inject fault */
             if (fptr->type == S_A_0)
-              ckt->gate[i].in_val[fptr->input_index] = BIT0_MASK; 
+              cur_gate->in_val[fptr->input_index] = BIT0_MASK; 
             else 
-              ckt->gate[i].in_val[fptr->input_index] = BIT1_MASK; 
+              cur_gate->in_val[fptr->input_index] = BIT1_MASK; 
             /* compute gate output value */
-            evaluate(ckt->gate[i]);
+            evaluate(cur_gate);
           }
           else { /* fault at output */
             /* evaluate(ckt->gate[i]); */
             /* inject fault */
             if (fptr->type == S_A_0)
-              ckt->gate[i].out_val = BIT0_MASK; 
+              cur_gate->out_val = BIT0_MASK; 
             else 
-              ckt->gate[i].out_val = BIT1_MASK; 
+              cur_gate->out_val = BIT1_MASK; 
           }
         }
         else { /* not faulty gate */
           /* compute gate output value */
-          evaluate(ckt->gate[i]);
+          evaluate(cur_gate);
         }
       }
       /* check if fault detected */
