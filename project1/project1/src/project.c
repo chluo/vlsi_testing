@@ -151,15 +151,6 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
     /* loop through all pattern groups (N_PARA patterns per group) */
     detected_flag = FALSE;
     for (p = 0/*, k = 0*/; p < pat->len && !detected_flag; p += N_PARA/*, k += 1*/) {
-      /* assign primary input values for pattern */ 
-      /*
-      for (i = 0; i < ckt->npi; i++) {
-        gate_t *cur_pi = & (ckt->gate[ckt->pi[i]]);
-        cur_pi->out_val = 0; 
-        for (j = 0; j < N_PARA && p + j < pat->len; j++) 
-          cur_pi->out_val |= (pat->in[p + j][i] + 1) << (2 * j);
-      }
-      */
       /* evaluate all gates */
       for (i = 0; i < ckt->ngates; i++) {
         gate_t *cur_gate = & (ckt->gate[i]); 
@@ -167,8 +158,8 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
         if (i < fptr->gate_index || cur_gate->type == PI) {
           cur_gate->out_val = cur_gate->out_ff[p/N_PARA];
         }
+        /* faulty gate & downstream gates */
         if (i >= fptr->gate_index) {
-          /* downstream gates */
           /* get gate input values */
           switch ( ckt->gate[i].type ) {
             /* gates with no input terminal */
