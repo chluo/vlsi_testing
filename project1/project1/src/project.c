@@ -15,16 +15,16 @@
 
 #define compute_AND(result,val1,val2) \
   { \
-    result = ((val1 & BIT0_MASK) | (val2 & BIT0_MASK))  \
+    result = ((val1 | val2) & BIT0_MASK)  \
              | \
-             ((val1 & BIT1_MASK) & (val2 & BIT1_MASK)) ;\
+             ((val1 & val2) & BIT1_MASK) ;\
   } 
 
 #define compute_OR(result,val1,val2) \
   { \
-    result = ((val1 & BIT0_MASK) & (val2 & BIT0_MASK))  \
+    result = ((val1 & val2) & BIT0_MASK)  \
              | \
-             ((val1 & BIT1_MASK) | (val2 & BIT1_MASK)) ;\
+             ((val1 | val2) & BIT1_MASK) ;\
   }
 
 #define evaluate(gate_ptr) \
@@ -139,10 +139,6 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
         case NOR:
           cur_gate->in_val[0] = ckt->gate[cur_gate->fanin[0]].out_val;
           cur_gate->in_val[1] = ckt->gate[cur_gate->fanin[1]].out_val;
-          /*
-          ckt->gate[i].in_val[0] = ckt->gate[ckt->gate[i].fanin[0]].out_val;
-          ckt->gate[i].in_val[1] = ckt->gate[ckt->gate[i].fanin[1]].out_val;
-          */
           break;
         default:
           assert(0);
@@ -205,9 +201,6 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
           case BUF:
           case PO:
             cur_gate->in_val[0] = ckt->gate[cur_gate->fanin[0]].out_val;
-            /*
-            ckt->gate[i].in_val[0] = ckt->gate[ckt->gate[i].fanin[0]].out_val;
-            */
             break;
           /* gates with two input terminals */
           case AND:
@@ -216,10 +209,6 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
           case NOR:
             cur_gate->in_val[0] = ckt->gate[cur_gate->fanin[0]].out_val;
             cur_gate->in_val[1] = ckt->gate[cur_gate->fanin[1]].out_val;
-            /*
-            ckt->gate[i].in_val[0] = ckt->gate[ckt->gate[i].fanin[0]].out_val;
-            ckt->gate[i].in_val[1] = ckt->gate[ckt->gate[i].fanin[1]].out_val;
-            */
             break;
           default:
             assert(0);
