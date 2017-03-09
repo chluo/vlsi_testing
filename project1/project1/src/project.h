@@ -58,7 +58,8 @@ struct gate_struct {
   int num_fanout;                                       /* number of fanout's */
   int *fanout;                                          /* array of indices of fanout gates */
   unsigned int in_val[MAX_GATE_FANIN];                  /* store input values of gate for N_PARA patterns */
-  unsigned int out_val;                                 /* store output value of gate for N_PARA patterns */
+  unsigned int out_val;                                 /* store output values of gate for N_PARA patterns */
+  unsigned int out_ff[MAX_PATTERNS / N_PARA];           /* fault free output values for N_PARA patterns */
 };
 
 typedef struct circuit_struct circuit_t;
