@@ -87,12 +87,13 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
   int          detected_flag;
   fault_list_t *fptr, *prev_fptr;
 
-  /* ----------------------------------------------------------------------
-   * fault-free simulation
-   * ------------------------------------------------------------------- */
-
   /* loop through all pattern groups (N_PARA patterns per group) */
   for (p = 0/*, k = 0*/; p < pat->len; p += N_PARA/*, k += 1*/) {
+
+    /* ----------------------------------------------------------------------
+     * fault-free simulation
+     * ------------------------------------------------------------------- */
+
     /* assign primary input values for pattern */ 
     for (i = 0; i < ckt->npi; i++) {
       gate_t *cur_pi = & (ckt->gate[ckt->pi[i]]);
@@ -130,7 +131,7 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
       /* compute gate output value */
       evaluate(cur_gate);
       /* store fault free output values for each gate */ 
-      cur_gate->out_ff[p/N_PARA] = cur_gate->out_val; 
+      cur_gate->out_ff = cur_gate->out_val; 
     }
     /* put fault-free primary output values into pat data structure */
     for (i = 0; i < ckt->npo; i++) {
@@ -139,24 +140,22 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
         pat->out[p + j][i] = ((cur_po->out_val >> (2 * j)) & 3) - 1; 
       }
     }
-  }
 
-  /* ----------------------------------------------------------------------
-   * fault simulation
-   * ------------------------------------------------------------------- */
+    /* ----------------------------------------------------------------------
+     * fault simulation
+     * ------------------------------------------------------------------- */
 
-  /* loop through all undetected faults */
-  prev_fptr = (fault_list_t *)NULL;
-  for (fptr = undetected_flist; fptr != (fault_list_t *)NULL; fptr=fptr->next) {
-    /* loop through all pattern groups (N_PARA patterns per group) */
-    detected_flag = FALSE;
-    for (p = 0/*, k = 0*/; p < pat->len && !detected_flag; p += N_PARA/*, k += 1*/) {
+    /* loop through all undetected faults */
+    prev_fptr = (fault_list_t *)NULL;
+    for (fptr = undetected_flist; fptr != (fault_list_t *)NULL; fptr=fptr->next) {
+      /* loop through all pattern groups (N_PARA patterns per group) */
+      detected_flag = FALSE;
       /* evaluate all gates */
       for (i = 0; i < ckt->ngates; i++) {
         gate_t *cur_gate = & (ckt->gate[i]); 
         /* assign fault-free output values of upstream gates */
         if (i < fptr->gate_index || cur_gate->type == PI) {
-          cur_gate->out_val = cur_gate->out_ff[p/N_PARA];
+          cur_gate->out_val = cur_gate->out_ff;
         }
         /* faulty gate & downstream gates */
         if (i >= fptr->gate_index) {
@@ -214,28 +213,29 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
       for (i = 0; i < ckt->npo; i++) {
         gate_t *cur_po = & (ckt->gate[ckt->po[i]]); 
         for (j = 0; j < N_PARA && p + j < pat->len; j++) {
-          if ( (((cur_po->out_val >> (2 * j)) & 3) == LOGIC_0) && ( pat->out[p + j][i] == 1 )  
-            || (((cur_po->out_val >> (2 * j)) & 3) == LOGIC_1) && ( pat->out[p + j][i] == 0 ) ) {
+          if ( (((cur_po->out_val >> (2 * j)) & 3) == MY_LOGIC_0) && ( pat->out[p + j][i] == 1 )  
+            || (((cur_po->out_val >> (2 * j)) & 3) == MY_LOGIC_1) && ( pat->out[p + j][i] == 0 ) ) {
             detected_flag = TRUE; break; 
           }
         }
         if (detected_flag) break; 
       }
-    }
-    /* fault dropping */ 
-    if ( detected_flag ) {
-      /* remove fault from undetected fault list */
-      if ( prev_fptr == (fault_list_t *)NULL ) {
-        /* if first fault in fault list, advance head of list pointer */
-        undetected_flist = fptr->next;
+      /* fault dropping */ 
+      if ( detected_flag ) {
+        /* remove fault from undetected fault list */
+        if ( prev_fptr == (fault_list_t *)NULL ) {
+          /* if first fault in fault list, advance head of list pointer */
+          undetected_flist = fptr->next;
+        }
+        else { /* if not first fault in fault list, then remove link */
+          prev_fptr->next = fptr->next;
+        }
       }
-      else { /* if not first fault in fault list, then remove link */
-        prev_fptr->next = fptr->next;
+      else { /* fault remains undetected, keep on list */
+        prev_fptr = fptr;
       }
-    }
-    else { /* fault remains undetected, keep on list */
-      prev_fptr = fptr;
     }
   }
   return(undetected_flist);
 }
+

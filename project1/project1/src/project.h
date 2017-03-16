@@ -3,19 +3,29 @@
 #define TRUE  1
 #define FALSE 0
 
+#define LOGIC_0  0
+#define LOGIC_1  1
+#define LOGIC_X  2
+
 #define MAX_GATE_FANIN   2
 #define MAX_PATTERNS     100000
-#define MAX_GATES	 100000
-#define MAX_PO		 2000
-#define MAX_PI		 2000
-#define MAX_FAULTS	 1000000
-#define WORD_SIZE 32
+#define MAX_GATES	       100000
+#define MAX_PO		       2000
+#define MAX_PI		       2000
+#define MAX_FAULTS	     1000000
+#define WORD_SIZE        32
 
 /* signal values */
-#define UNDEFINED   0
-#define LOGIC_0     1
-#define LOGIC_1     2
-#define LOGIC_X     3
+#define UNDEFINED     -1
+#define LOGIC_0        0
+#define LOGIC_1        1
+#define LOGIC_X        2
+
+/* redefined signal values */
+#define MY_UNDEFINED   0
+#define MY_LOGIC_0     1
+#define MY_LOGIC_1     2
+#define MY_LOGIC_X     3
 
 /* Number of patterns run in parallel */ 
 #define N_PARA      16
@@ -34,7 +44,7 @@ enum gate_type_enum {
 
 typedef struct pattern_struct pattern_t;
 struct pattern_struct {
-  int len;                 /* num. of pattern to be simulated */
+  int len;                          /* num. of pattern to be simulated */
   unsigned int *in[MAX_PATTERNS];   /* array of 3 value input patterns */
   unsigned int *out[MAX_PATTERNS];  /* corresponding array of 3 value output patterns */
 };
@@ -52,14 +62,14 @@ struct fault_list_struct {
 typedef struct gate_struct gate_t;
 struct gate_struct {
   char *name;
-  int index;                                            /* set equal to index in ckt.gate[id] array */
-  gate_type_t type;                                     /* type of gate */
-  int fanin[MAX_GATE_FANIN];                            /* array of indices of fanin gates */
-  int num_fanout;                                       /* number of fanout's */
-  int *fanout;                                          /* array of indices of fanout gates */
-  unsigned int in_val[MAX_GATE_FANIN];                  /* store input values of gate for N_PARA patterns */
-  unsigned int out_val;                                 /* store output values of gate for N_PARA patterns */
-  unsigned int out_ff[MAX_PATTERNS / N_PARA];           /* fault free output values for N_PARA patterns */
+  int index;                             /* set equal to index in ckt.gate[id] array */
+  gate_type_t type;                      /* type of gate */
+  int fanin[MAX_GATE_FANIN];             /* array of indices of fanin gates */
+  int num_fanout;                        /* number of fanout's */
+  int *fanout;                           /* array of indices of fanout gates */
+  unsigned int in_val[MAX_GATE_FANIN];   /* store input values of gate for N_PARA patterns */
+  unsigned int out_val;                  /* store output values of gate for N_PARA patterns */
+  unsigned int out_ff;                   /* fault free output values for the current pattern */
 };
 
 typedef struct circuit_struct circuit_t;
