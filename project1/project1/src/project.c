@@ -212,12 +212,8 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
       /* check if fault detected */
       for (i = 0; i < ckt->npo; i++) {
         gate_t *cur_po = & (ckt->gate[ckt->po[i]]); 
-        for (j = 0; j < N_PARA && p + j < pat->len; j++) {
-          if ( (((cur_po->out_val >> (2 * j)) & 3) == MY_LOGIC_0) && ( pat->out[p + j][i] == 1 )  
-            || (((cur_po->out_val >> (2 * j)) & 3) == MY_LOGIC_1) && ( pat->out[p + j][i] == 0 ) ) {
-            detected_flag = TRUE; break; 
-          }
-        }
+        int res_xor = (cur_po->out_val) ^ (cur_po->out_ff); 
+        detected_flag = (((res_xor & BIT0_MASK) & ((res_xor >> 1) & BIT0_MASK)) != 0); 
         if (detected_flag) break; 
       }
       /* fault dropping */ 
