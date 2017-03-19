@@ -64,6 +64,16 @@
     } \
   }
 
+#define fault_dropping() \
+  { \
+    if ( prev_fptr == (fault_list_t *)NULL ) {\
+      undetected_flist = fptr->next;\
+    }\
+    else { \
+      prev_fptr->next = fptr->next;\
+    }\
+  }
+
 /*************************************************************************
 
 Function:  three_val_fault_simulate
@@ -132,6 +142,8 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
       evaluate(cur_gate);
       /* store fault free output values for each gate */ 
       cur_gate->out_ff = cur_gate->out_val; 
+      /* clear the fault dropping flags */
+      cur_gate->fault_drop_flag = 0; 
     }
     /* put fault-free primary output values into pat data structure */
     for (i = 0; i < ckt->npo; i++) {
@@ -148,6 +160,36 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
     /* loop through all undetected faults */
     prev_fptr = (fault_list_t *)NULL;
     for (fptr = undetected_flist; fptr != (fault_list_t *)NULL; fptr=fptr->next) {
+      /* Faults with larger gate indices are at the front of the linked list. 
+       * Downstream faults are simulated first. 
+       * So our deductive fault dropping technique won't work. 
+       * */
+      printf("%d\n", fptr->gate_index); 
+      /* fault dropping according to deductive fault dropping flag */ 
+      int cur_fdrop_flag   = ckt->gate[fptr->gate_index].fault_drop_flag; 
+      unsigned int node_sa = (fptr->type == S_A_0) ? BIT0_MASK : BIT1_MASK; 
+      unsigned int node_ff; 
+      unsigned int xor; 
+      if (fptr->input_index == -1) { /* fault at gate output */
+        if (cur_fdrop_flag > 0 && cur_fdrop_flag < 4) {
+          gate_t *fault_gate = & (ckt->gate[fptr->gate_index]); 
+          node_ff = fault_gate->out_ff; 
+          xor = (node_ff ^ node_sa) & fault_gate->thing; 
+          if ((xor & (xor >> 1) & BIT0_MASK) != 0) {
+            fault_dropping(); printf("dropped\n"); continue; 
+          }
+        }
+      }
+      else { /* fault at gate input */
+        if (fptr->input_index == cur_fdrop_flag - 1) {
+          gate_t *fault_gate = & (ckt->gate[ckt->gate[fptr->gate_index].fanin[fptr->input_index]]); 
+          node_ff = fault_gate->out_ff; 
+          xor = (node_ff ^ node_sa) & fault_gate->thing; 
+          if ((xor & (xor >> 1) & BIT0_MASK) != 0) {
+            fault_dropping(); printf("dropped\n"); continue; 
+          }
+        }
+      }
       /* loop through all pattern groups (N_PARA patterns per group) */
       detected_flag = FALSE;
       /* evaluate all gates */
@@ -208,24 +250,49 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
             evaluate(cur_gate);
           }
         }
+        /* clear the fault dropping flags */
+        cur_gate->fault_drop_flag = 0; 
       }
       /* check if fault detected */
+      int thing; 
+      int res_xor; 
       for (i = 0; i < ckt->npo; i++) {
         gate_t *cur_po = & (ckt->gate[ckt->po[i]]); 
-        int res_xor = (cur_po->out_val) ^ (cur_po->out_ff); 
-        detected_flag = (((res_xor & BIT0_MASK) & ((res_xor >> 1) & BIT0_MASK)) != 0); 
+        res_xor = (cur_po->out_val) ^ (cur_po->out_ff); 
+        /* set the mask which indicates which patterns detect the fault */
+        thing = (res_xor & (res_xor >> 1) & BIT0_MASK); 
+        thing = thing | (thing << 1); 
+        detected_flag = (thing != 0); 
         if (detected_flag) break; 
       }
       /* fault dropping */ 
       if ( detected_flag ) {
-        /* remove fault from undetected fault list */
-        if ( prev_fptr == (fault_list_t *)NULL ) {
-          /* if first fault in fault list, advance head of list pointer */
-          undetected_flist = fptr->next;
+        /* deductively mark downstream faults to be dropped  */ 
+        gate_t *gptr = &(ckt->gate[fptr->gate_index]); 
+        gate_t *gptr_prev = gptr;  
+        if (fptr->input_index != -1) {
+          /* gate output has detectable faults */
+          gptr->fault_drop_flag = 3; 
+          gptr->thing = thing; 
+          /* printf("marked\n"); */
         }
-        else { /* if not first fault in fault list, then remove link */
-          prev_fptr->next = fptr->next;
+        while (gptr->num_fanout == 1) {
+          gptr = &(ckt->gate[gptr->fanout[0]]); 
+          if (&(ckt->gate[gptr->fanin[0]]) == gptr_prev) {
+            /* input 0 and output have detectable faults */
+            gptr->fault_drop_flag = 1; 
+            gptr->thing = thing; 
+            /* printf("marked\n"); */
+          }
+          else {
+            /* input 1 and output have detectable faults */
+            gptr->fault_drop_flag = 2; 
+            gptr->thing = thing; 
+            /* printf("marked\n"); */
+          }
+          gptr_prev = gptr; 
         }
+        fault_dropping(); 
       }
       else { /* fault remains undetected, keep on list */
         prev_fptr = fptr;

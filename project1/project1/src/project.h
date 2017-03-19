@@ -57,19 +57,27 @@ struct fault_list_struct {
                          /* (>= 0)  points to gate input where the fault is */
   stuck_val_t type;      /* type of stuck-at fault */
   fault_list_t *next;    /* next fault in list (NULL ptr if end of list) */
+
 };
 
 typedef struct gate_struct gate_t;
 struct gate_struct {
   char *name;
-  int index;                             /* set equal to index in ckt.gate[id] array */
-  gate_type_t type;                      /* type of gate */
-  int fanin[MAX_GATE_FANIN];             /* array of indices of fanin gates */
-  int num_fanout;                        /* number of fanout's */
-  int *fanout;                           /* array of indices of fanout gates */
-  unsigned int in_val[MAX_GATE_FANIN];   /* store input values of gate for N_PARA patterns */
-  unsigned int out_val;                  /* store output values of gate for N_PARA patterns */
-  unsigned int out_ff;                   /* fault free output values for the current pattern */
+  int index;                            /* set equal to index in ckt.gate[id] array */
+  gate_type_t type;                     /* type of gate */
+  int fanin[MAX_GATE_FANIN];            /* array of indices of fanin gates */
+  int num_fanout;                       /* number of fanout's */
+  int *fanout;                          /* array of indices of fanout gates */
+  unsigned int in_val[MAX_GATE_FANIN];  /* store input values of gate for N_PARA patterns */
+  unsigned int out_val;                 /* store output values of gate for N_PARA patterns */
+  unsigned int out_ff;                  /* fault free output values for the current pattern */
+
+  /* deductive fault dropping flags */
+  int fault_drop_flag;                  /* 0: no fault dropping; 
+                                           1: drop fault on input 0 and output 
+                                           2: drop fault on input 1 and output
+                                           3: drop fault on output */ 
+  int thing;                            /* mask indicating which patterns detect the fault */
 };
 
 typedef struct circuit_struct circuit_t;
