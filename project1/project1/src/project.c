@@ -145,6 +145,7 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
       /* clear the fault dropping flags */
       cur_gate->fdrop_in0 = -1; 
       cur_gate->fdrop_in1 = -1; 
+      cur_gate->fdrop_out = -1; 
     }
     /* put fault-free primary output values into pat data structure */
     for (i = 0; i < ckt->npo; i++) {
@@ -164,22 +165,41 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
       /* early fault dropping according to deductive fault dropping flags */ 
       int cur_fdrop_in0 = ckt->gate[fptr->gate_index].fdrop_in0; 
       int cur_fdrop_in1 = ckt->gate[fptr->gate_index].fdrop_in1; 
+      int cur_fdrop_out = ckt->gate[fptr->gate_index].fdrop_out; 
       /* printf("%d, %d\n", cur_fdrop_in0, cur_fdrop_in1); */
       switch ( fptr-> type ) {
         case S_A_0: 
           if ( cur_fdrop_in0 == 0 && fptr->input_index == 0 ) {
-            fault_dropping();  /* printf("dropped\n"); */  continue; 
+            fault_dropping();  
+            printf("dropped\n");  
+            continue; 
           }
           if ( cur_fdrop_in1 == 0 && fptr->input_index == 1 ) {
-            fault_dropping();  /* printf("dropped\n"); */ continue; 
+            fault_dropping();  
+            printf("dropped\n"); 
+            continue; 
+          }
+          if ( cur_fdrop_out == 0 && fptr->input_index ==-1 ) {
+            fault_dropping();  
+            printf("dropped\n"); 
+            continue; 
           }
           break; 
         case S_A_1:
           if ( cur_fdrop_in0 == 1 && fptr->input_index == 0 ) {
-            fault_dropping();  /* printf("dropped\n"); */  continue; 
+            fault_dropping();  
+            printf("dropped\n");  
+            continue; 
           }
           if ( cur_fdrop_in1 == 1 && fptr->input_index == 1 ) {
-            fault_dropping();  /* printf("dropped\n"); */  continue; 
+            fault_dropping();  
+            printf("dropped\n");  
+            continue; 
+          }
+          if ( cur_fdrop_out == 1 && fptr->input_index ==-1 ) {
+            fault_dropping();  
+            printf("dropped\n"); 
+            continue; 
           }
       }
       /* loop through all pattern groups (N_PARA patterns per group) */
@@ -245,6 +265,7 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
         /* clear the fault dropping flags */
         cur_gate->fdrop_in0 = -1; 
         cur_gate->fdrop_in1 = -1; 
+        cur_gate->fdrop_out = -1; 
       }
       /* check if fault detected */
       int thing;        /* mask indicating which patterns detected 
@@ -264,26 +285,82 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
         /* deductively mark input faults for early fault dropping */ 
         gate_t *gptr = &(ckt->gate[fptr->gate_index]); 
         gptr->thing = thing; 
-        /* only for gates with two input terminals */
         if (fptr->input_index == -1) {
-          /* the input values are guaranteed to be fault-free 
-           * since the fault is at the output */ 
-          int in0_mskd = gptr->in_val[0] & gptr->thing; 
-          int in1_mskd = gptr->in_val[1] & gptr->thing; 
-          int in0_is_0 = ((in0_mskd & BIT0_MASK) != 0) && ((in0_mskd & BIT1_MASK) == 0); 
-          int in1_is_0 = ((in1_mskd & BIT0_MASK) != 0) && ((in1_mskd & BIT1_MASK) == 0); 
-          int in0_is_1 = ((in0_mskd & BIT1_MASK) != 0) && ((in0_mskd & BIT0_MASK) == 0); 
-          int in1_is_1 = ((in1_mskd & BIT1_MASK) != 0) && ((in1_mskd & BIT0_MASK) == 0); 
-          if ( (gptr->type ==  AND && fptr->type == S_A_1)  
-            || (gptr->type == NAND && fptr->type == S_A_0) ) {
-            gptr->fdrop_in0 = (in0_is_0 && in1_is_1) ? 1 : -1; 
-            gptr->fdrop_in1 = (in1_is_0 && in0_is_1) ? 1 : -1; 
-          }
-          if ( (gptr->type ==  NOR && fptr->type == S_A_1)  
-            || (gptr->type ==   OR && fptr->type == S_A_0) ) {
-            gptr->fdrop_in0 = (in0_is_1 && in1_is_0) ? 0 : -1; 
-            gptr->fdrop_in1 = (in1_is_1 && in0_is_0) ? 0 : -1; 
-          }
+          int k = 0;
+          do { /* while ( gptr->num_fanout == 1 ) */
+            printf ("while: %d\n", k++); 
+            /* the input values are guaranteed to be fault-free 
+             * since the fault is at the output */ 
+            int in0_mskd = gptr->in_val[0] & gptr->thing; 
+            int in1_mskd = gptr->in_val[1] & gptr->thing; 
+            int in0_is_0 = ((in0_mskd & BIT0_MASK) != 0) && ((in0_mskd & BIT1_MASK) == 0); 
+            int in1_is_0 = ((in1_mskd & BIT0_MASK) != 0) && ((in1_mskd & BIT1_MASK) == 0); 
+            int in0_is_1 = ((in0_mskd & BIT1_MASK) != 0) && ((in0_mskd & BIT0_MASK) == 0); 
+            int in1_is_1 = ((in1_mskd & BIT1_MASK) != 0) && ((in1_mskd & BIT0_MASK) == 0); 
+            /* BUF and INV */ 
+            if ( gptr->type == BUF ) {
+              gptr = & (ckt->gate[gptr->fanin[0]]); 
+              if ( gptr->num_fanout == 1 ) gptr->fdrop_out = (fptr->type == S_A_0) ? 0 : 1;
+              break; 
+            }
+            if ( gptr->type == INV ) {
+              gptr = & (ckt->gate[gptr->fanin[0]]); 
+              if ( gptr->num_fanout == 1 ) gptr->fdrop_out = (fptr->type == S_A_0) ? 1 : 0;
+              break; 
+            }
+            /* condition 1: there exist at least one controlling values
+             * at the inputs */
+            if ( (gptr->type ==  AND && fptr->type == S_A_1 /* fault-free output has to be 0 */)  
+              || (gptr->type == NAND && fptr->type == S_A_0 /* fault-free output has to be 1 */) ) {
+              /* only input 0 is critical (controlling) */
+              if (in0_is_0 && in1_is_1) {
+                gptr->fdrop_in0 = 1; 
+                gptr = & (ckt->gate[gptr->fanin[0]]); 
+                if ( gptr->num_fanout == 1 ) gptr->fdrop_out = 1;
+              }
+              /* only input 1 is critical (controlling) */
+              else if (in1_is_0 && in0_is_1) {
+                gptr->fdrop_in1 = 1; 
+                gptr = & (ckt->gate[gptr->fanin[1]]); 
+                if ( gptr->num_fanout == 1 ) gptr->fdrop_out = 1;
+              }
+              /* both inputs are non-critical (both controlling) */
+              else {
+                /* stop backtracing */
+                break; 
+              }
+            }
+            else if ( (gptr->type ==  NOR && fptr->type == S_A_1 /* fault-free output has to be 0 */)  
+                   || (gptr->type ==   OR && fptr->type == S_A_0 /* fault-free output has to be 1 */) ) {
+              /* only input 0 is critical (controlling) */
+              if (in0_is_1 && in1_is_0) {
+                gptr->fdrop_in0 = 0; 
+                gptr = & (ckt->gate[gptr->fanin[0]]); 
+                if ( gptr->num_fanout == 1 ) gptr->fdrop_out = 0;
+              }
+              /* only input 1 is critical (controlling) */
+              else if (in1_is_1 && in0_is_0) {
+                gptr->fdrop_in1 = 0; 
+                gptr = & (ckt->gate[gptr->fanin[1]]); 
+                if ( gptr->num_fanout == 1 ) gptr->fdrop_out = 0;
+              }
+              /* both inputs are non-critical (both controlling) */
+              else {
+                /* stop backtracing */
+                break; 
+              }
+            }
+            /* condition 2: both inputs are non-controlling. Choose one of them to
+             * continue backtracing */ 
+            /* Although both inputs are critical, they are not marked because
+             * the corresponding s-a faults do not come into the fault list */
+            else if (gptr->type != PI /* PIs do not have fanins*/ ) {
+              gate_type_t prev_type = gptr->type;  
+              gptr = & (ckt->gate[gptr->fanin[0]]); 
+              if ( gptr->num_fanout == 1 ) gptr->fdrop_out = (prev_type == AND || prev_type == NAND) ? 0 : 1;
+            }
+            else break; 
+          } while ( gptr->num_fanout == 1 ); 
         }
         /* drop the current detected fault */
         fault_dropping(); 

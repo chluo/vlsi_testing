@@ -81,6 +81,10 @@ struct gate_struct {
                                            -1: no fault dropping; 
                                             0: drop s-a-0 fault 
                                             1: drop s-a-1 fault */
+  int fdrop_out;                        /* fault dropping flag for output 
+                                           -1: no fault dropping; 
+                                            0: drop s-a-0 fault 
+                                            1: drop s-a-1 fault */
   int thing;                            /* mask indicating which patterns detected 
                                            the fault on the gate output */
 };
