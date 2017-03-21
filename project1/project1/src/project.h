@@ -72,12 +72,17 @@ struct gate_struct {
   unsigned int out_val;                 /* store output values of gate for N_PARA patterns */
   unsigned int out_ff;                  /* fault free output values for the current pattern */
 
-  /* deductive fault dropping flags */
-  int fault_drop_flag;                  /* 0: no fault dropping; 
-                                           1: drop fault on input 0 and output 
-                                           2: drop fault on input 1 and output
-                                           3: drop fault on output */ 
-  int thing;                            /* mask indicating which patterns detect the fault */
+  /* fault dropping flags: for two-input gates only */
+  int fdrop_in0;                        /* fault dropping flag for input 0
+                                           -1: no fault dropping; 
+                                            0: drop s-a-0 fault 
+                                            1: drop s-a-1 fault */
+  int fdrop_in1;                        /* fault dropping flag for input 1
+                                           -1: no fault dropping; 
+                                            0: drop s-a-0 fault 
+                                            1: drop s-a-1 fault */
+  int thing;                            /* mask indicating which patterns detected 
+                                           the fault on the gate output */
 };
 
 typedef struct circuit_struct circuit_t;
