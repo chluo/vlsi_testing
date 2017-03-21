@@ -284,11 +284,12 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
       if ( detected_flag ) {
         /* deductively mark input faults for early fault dropping */ 
         gate_t *gptr = &(ckt->gate[fptr->gate_index]); 
+        stuck_val_t ftype = fptr->type; 
         gptr->thing = thing; 
         if (fptr->input_index == -1) {
-          int k = 0;
+          printf("while: ------------------- \n"); 
           do { /* while ( gptr->num_fanout == 1 ) */
-            printf ("while: %d\n", k++); 
+            printf("%d\n", gptr->index); 
             /* the input values are guaranteed to be fault-free 
              * since the fault is at the output */ 
             int in0_mskd = gptr->in_val[0] & gptr->thing; 
@@ -300,29 +301,41 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
             /* BUF and INV */ 
             if ( gptr->type == BUF ) {
               gptr = & (ckt->gate[gptr->fanin[0]]); 
-              if ( gptr->num_fanout == 1 ) gptr->fdrop_out = (fptr->type == S_A_0) ? 0 : 1;
+              if ( gptr->num_fanout == 1 ) {
+                gptr->fdrop_out = (ftype == S_A_0) ? 0 : 1;
+                ftype = (ftype == S_A_0) ? S_A_0 : S_A_1; 
+              }
               break; 
             }
             if ( gptr->type == INV ) {
               gptr = & (ckt->gate[gptr->fanin[0]]); 
-              if ( gptr->num_fanout == 1 ) gptr->fdrop_out = (fptr->type == S_A_0) ? 1 : 0;
+              if ( gptr->num_fanout == 1 ) { 
+                gptr->fdrop_out = (ftype == S_A_0) ? 1 : 0;
+                ftype = (ftype == S_A_0) ? S_A_1 : S_A_0; 
+              }
               break; 
             }
             /* condition 1: there exist at least one controlling values
              * at the inputs */
-            if ( (gptr->type ==  AND && fptr->type == S_A_1 /* fault-free output has to be 0 */)  
-              || (gptr->type == NAND && fptr->type == S_A_0 /* fault-free output has to be 1 */) ) {
+            if ( (gptr->type ==  AND && ftype == S_A_1 /* fault-free output has to be 0 */)  
+              || (gptr->type == NAND && ftype == S_A_0 /* fault-free output has to be 1 */) ) {
               /* only input 0 is critical (controlling) */
               if (in0_is_0 && in1_is_1) {
                 gptr->fdrop_in0 = 1; 
                 gptr = & (ckt->gate[gptr->fanin[0]]); 
-                if ( gptr->num_fanout == 1 ) gptr->fdrop_out = 1;
+                if ( gptr->num_fanout == 1 ) { 
+                  gptr->fdrop_out = 1;
+                  ftype = S_A_1; 
+                }
               }
               /* only input 1 is critical (controlling) */
               else if (in1_is_0 && in0_is_1) {
                 gptr->fdrop_in1 = 1; 
                 gptr = & (ckt->gate[gptr->fanin[1]]); 
-                if ( gptr->num_fanout == 1 ) gptr->fdrop_out = 1;
+                if ( gptr->num_fanout == 1 ) {
+                  gptr->fdrop_out = 1;
+                  ftype = S_A_1; 
+                }
               }
               /* both inputs are non-critical (both controlling) */
               else {
@@ -330,19 +343,25 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
                 break; 
               }
             }
-            else if ( (gptr->type ==  NOR && fptr->type == S_A_1 /* fault-free output has to be 0 */)  
-                   || (gptr->type ==   OR && fptr->type == S_A_0 /* fault-free output has to be 1 */) ) {
+            else if ( (gptr->type ==  NOR && ftype == S_A_1 /* fault-free output has to be 0 */)  
+                   || (gptr->type ==   OR && ftype == S_A_0 /* fault-free output has to be 1 */) ) {
               /* only input 0 is critical (controlling) */
               if (in0_is_1 && in1_is_0) {
                 gptr->fdrop_in0 = 0; 
                 gptr = & (ckt->gate[gptr->fanin[0]]); 
-                if ( gptr->num_fanout == 1 ) gptr->fdrop_out = 0;
+                if ( gptr->num_fanout == 1 ) {
+                  gptr->fdrop_out = 0;
+                  ftype = S_A_0; 
+                }
               }
               /* only input 1 is critical (controlling) */
               else if (in1_is_1 && in0_is_0) {
                 gptr->fdrop_in1 = 0; 
                 gptr = & (ckt->gate[gptr->fanin[1]]); 
-                if ( gptr->num_fanout == 1 ) gptr->fdrop_out = 0;
+                if ( gptr->num_fanout == 1 ) {
+                  gptr->fdrop_out = 0;
+                  ftype = S_A_0; 
+                }
               }
               /* both inputs are non-critical (both controlling) */
               else {
@@ -357,7 +376,10 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
             else if (gptr->type != PI /* PIs do not have fanins*/ ) {
               gate_type_t prev_type = gptr->type;  
               gptr = & (ckt->gate[gptr->fanin[0]]); 
-              if ( gptr->num_fanout == 1 ) gptr->fdrop_out = (prev_type == AND || prev_type == NAND) ? 0 : 1;
+              if ( gptr->num_fanout == 1 ) {
+                gptr->fdrop_out = (prev_type == AND || prev_type == NAND) ? 0 : /* OR || NOR */ 1;
+                ftype = gptr->fdrop_out ? S_A_1 : S_A_0; 
+              }
             }
             else break; 
           } while ( gptr->num_fanout == 1 ); 
