@@ -1,3 +1,30 @@
+/***********************************************************************
+ * 
+ * EE 382M-1 VLSI Testing 
+ *
+ * Spring 2017 Project 1
+ *
+ *----------------------------------------------------------------------          
+ *
+ * Authors: Wenbo Xu
+ *          Chunheng Luo
+ *
+ *----------------------------------------------------------------------          
+ *
+ * Optimization Strategies: 
+ *
+ * 1. Used Parallel Pattern Signal Fault Simulation. Packed 16 patterns
+ *    in one 32-bit unsigned integer. Redefined LOGIC_0 as 1, LOGIC_1 
+ *    as 2 and LOGIC_X as 3 to speed up bit manipulation. 
+ *
+ * 2. Used Downstream Fault Simulation, where simulation is performed 
+ *    only on downstream gates from the faulty gate. For upstream gates, 
+ *    fault free values are assigned. 
+ *
+ * 3. Optimized away redundant pointer operations.  
+ *
+ **********************************************************************/
+
 #include "project.h"
 #include <stddef.h>
 #include <string.h>
