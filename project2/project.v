@@ -1,21 +1,160 @@
-module bist_hardware(clk,rst,bistmode,bistdone,bistpass,cut_scanmode,
-                     cut_sdi,cut_sdo);
-  input          clk;
-  input          rst;
-  input          bistmode;
-  output         bistdone;
-  output         bistpass;
-  output         cut_scanmode;
-  output         cut_sdi;
-  input          cut_sdo;
+module bist_hardware (
+  clk, rst, bistmode, bistdone, bistpass, cut_scanmode, cut_sdi, cut_sdo
+);
 
+  input              clk          ;
+  input              rst          ;
+  input              bistmode     ;
+  output             bistdone     ;
+  output             bistpass     ;
+  output             cut_scanmode ;
+  output             cut_sdi      ;
+  input              cut_sdo      ;
 
-// Add your code here
+  //
+  // Add your code, which "needs NOT be synthesizable", here
+  // 
+  /* Note: The number of scan cells in the DUT is 227 */ 
+  // Variable list
+  reg  [ 15 : 0 ]    bist_pg_lfsr_r                  ;  // Pattern  generation  LFSR seq elements
+  reg  [ 15 : 0 ]    bist_rc_lfsr_r                  ;  // Response compression LFSR seq elements
+  reg                bist_pg_lfsr_shift              ;  // Tell the pattern  generation  LFSR to shift by 1
+  reg                bist_rc_lfsr_shift              ;  // Tell the Response compression LFSR to shift by 1
+  reg  [ 15 : 0 ]    bist_sig_ff_r      [ 0 : 1999 ] ;  // Signatures of the fault-free response for all 2000 patterns
+  reg  [ 15 : 0 ]    bist_sig_ft_r                   ;  // Signature  of the faulty     response for the current pattern
+  reg                bist_ff_r                       ;  // State indicating the current test is the fault-free test
+
+  reg                bistdone                        ;
+  reg                bistpass                        ;
+  reg                cut_scanmode                    ;
+
+  assign             cut_sdi = bist_pg_lfsr_r [ 15 ] ; 
+
+  // 16-bit LFSR for pattern generation: x^16 + x^5 + x^4 + x^3 + 1 
+  always @ ( posedge clk ) begin : pg_lfsr
+    // Synchronous reset, active high 
+    if ( rst ) begin 
+      // Reset value makes sure the LFSR does not stuck at all-zero state
+      bist_pg_lfsr_r <= 16'd1 ;
+    end 
+    else if ( bist_pg_lfsr_shift ) begin 
+      bist_pg_lfsr_r [  0 ] <= bist_pg_lfsr_r [ 15 ]                         ;
+      bist_pg_lfsr_r [  1 ] <= bist_pg_lfsr_r [  0 ]                         ;
+      bist_pg_lfsr_r [  2 ] <= bist_pg_lfsr_r [  1 ]                         ;
+      bist_pg_lfsr_r [  3 ] <= bist_pg_lfsr_r [  2 ] ^ bist_pg_lfsr_r [ 15 ] ;
+      bist_pg_lfsr_r [  4 ] <= bist_pg_lfsr_r [  3 ] ^ bist_pg_lfsr_r [ 15 ] ;
+      bist_pg_lfsr_r [  5 ] <= bist_pg_lfsr_r [  4 ] ^ bist_pg_lfsr_r [ 15 ] ;
+      bist_pg_lfsr_r [  6 ] <= bist_pg_lfsr_r [  5 ]                         ;
+      bist_pg_lfsr_r [  7 ] <= bist_pg_lfsr_r [  6 ]                         ;
+      bist_pg_lfsr_r [  8 ] <= bist_pg_lfsr_r [  7 ]                         ;
+      bist_pg_lfsr_r [  9 ] <= bist_pg_lfsr_r [  8 ]                         ;
+      bist_pg_lfsr_r [ 10 ] <= bist_pg_lfsr_r [  9 ]                         ;
+      bist_pg_lfsr_r [ 11 ] <= bist_pg_lfsr_r [ 10 ]                         ;
+      bist_pg_lfsr_r [ 12 ] <= bist_pg_lfsr_r [ 11 ]                         ;
+      bist_pg_lfsr_r [ 13 ] <= bist_pg_lfsr_r [ 12 ]                         ;
+      bist_pg_lfsr_r [ 14 ] <= bist_pg_lfsr_r [ 13 ]                         ;
+      bist_pg_lfsr_r [ 15 ] <= bist_pg_lfsr_r [ 14 ]                         ;
+    end 
+  end : pg_lfsr
+
+  // 16-bit LFSR for response compression: x^16 + x^5 + x^4 + x^3 + 1 
+  always @ ( posedge clk ) begin : rc_lfsr
+    // Synchronous reset, active high 
+    if ( rst ) begin 
+      // Reset value makes sure the LFSR does not stuck at all-zero state
+      bist_rc_lfsr_r <= 16'd1 ;
+    end 
+    else if ( bist_rc_lfsr_shift ) begin 
+      bist_rc_lfsr_r [  0 ] <= bist_rc_lfsr_r [ 15 ] ^ cut_sdo               ;
+      bist_rc_lfsr_r [  1 ] <= bist_rc_lfsr_r [  0 ]                         ;
+      bist_rc_lfsr_r [  2 ] <= bist_rc_lfsr_r [  1 ]                         ;
+      bist_rc_lfsr_r [  3 ] <= bist_rc_lfsr_r [  2 ] ^ bist_rc_lfsr_r [ 15 ] ;
+      bist_rc_lfsr_r [  4 ] <= bist_rc_lfsr_r [  3 ] ^ bist_rc_lfsr_r [ 15 ] ;
+      bist_rc_lfsr_r [  5 ] <= bist_rc_lfsr_r [  4 ] ^ bist_rc_lfsr_r [ 15 ] ;
+      bist_rc_lfsr_r [  6 ] <= bist_rc_lfsr_r [  5 ]                         ;
+      bist_rc_lfsr_r [  7 ] <= bist_rc_lfsr_r [  6 ]                         ;
+      bist_rc_lfsr_r [  8 ] <= bist_rc_lfsr_r [  7 ]                         ;
+      bist_rc_lfsr_r [  9 ] <= bist_rc_lfsr_r [  8 ]                         ;
+      bist_rc_lfsr_r [ 10 ] <= bist_rc_lfsr_r [  9 ]                         ;
+      bist_rc_lfsr_r [ 11 ] <= bist_rc_lfsr_r [ 10 ]                         ;
+      bist_rc_lfsr_r [ 12 ] <= bist_rc_lfsr_r [ 11 ]                         ;
+      bist_rc_lfsr_r [ 13 ] <= bist_rc_lfsr_r [ 12 ]                         ;
+      bist_rc_lfsr_r [ 14 ] <= bist_rc_lfsr_r [ 13 ]                         ;
+      bist_rc_lfsr_r [ 15 ] <= bist_rc_lfsr_r [ 14 ]                         ;
+    end 
+  end : rc_lfsr
+
+  //
+  // Help tasks and functions
+  //
+  // Apply one scan pattern
+  task bist_apply_pat ( input int i ) ; 
+    // Initiate the scan mode
+    @ ( posedge clk ) 
+    cut_scanmode       <= 1'b1 ;
+    bist_pg_lfsr_shift <= 1'b1 ; 
+    // Scan in one pattern (277 cycles) 
+    repeat ( 277 ) @ ( posedge clk ) 
+    // Exit the scan mode
+    cut_scanmode       <= 1'b0 ;
+    bist_pg_lfsr_shift <= 1'b0 ; 
+    // Capture 
+    @ ( posedge clk ) 
+    // Scan out (277 cycles) 
+    cut_scanmode       <= 1'b1 ;
+    bist_rc_lfsr_shift <= 1'b1 ; 
+    repeat ( 277 ) @ ( posedge clk ) 
+    // Scan-out complete
+    cut_scanmode       <= 1'b0 ;
+    bist_rc_lfsr_shift <= 1'b0 ; 
+    // Store the signature(s)
+    @ ( posedge clk ) begin 
+      bist_sig_ft_r <= bist_rc_lfsr_r ;
+      // Store the fault-free signature if it is the first test
+      // The fist test is fault-free according to the project document
+      if ( bist_ff_r ) 
+        bist_sig_ff_r [ i ] <= bist_rc_lfsr_r ;
+    end 
+  endtask 
+
+  // Check the output signature against the fault-free one  
+  function int bist_check_sig ( int i ) ;
+    if ( bist_ff_r ) return 1 ; 
+    if ( bist_sig_ft_r != bist_sig_ff_r [ i ] ) return 0 ; 
+    else                                        return 1 ;
+  endfunction 
+
+  // Evaluate the signature and output the result
+  task bist_finish ( input int i ) ;
+    @ ( posedge clk ) begin 
+      bistdone <= 1'b1 ; 
+      bistpass <= bist_check_sig ( i ) ? 1'b1 : 1'b0 ;
+    end 
+    @ ( posedge clk ) 
+      bistdone <= 1'b0 ; 
+  endtask 
+
+  // 
+  // Main routine 
+  //
+  initial begin 
+    // Synchronize the whole thing with clk 
+    // Wait until the BIST mode is initiated (not sure if Verilog supports the wait keyword) 
+    // When rst is asserted, the pattern generator is reset at the same time
+    forever @ ( posedge clk ) begin 
+      if ( bist_mode && rst ) break ; 
+    end // forever @ ( posedge clk ) 
+
+    // Apply 2000 pseudo-random scan patterns
+    for ( int i = 0 ; i < 2000 ; i = i + 1 ) begin 
+      // Apply a scan pattern and store the response signature
+      bist_apply_pat ( i ) ;
+      // Evaluate the response signature and output the result
+      bist_finish ( i ) ;
+    end // for
+  end // initial 
 
 endmodule  
-
-
-
 
 module chip(clk,rst,pi,po,bistmode,bistdone,bistpass);
   input          clk;
