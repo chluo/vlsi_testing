@@ -11,49 +11,61 @@ module bist_hardware (
   output             cut_sdi      ;
   input              cut_sdo      ;
 
-  //
+  // ======================================================================
   // Add your code here
-  // 
+  // ======================================================================
+ 
   /* Note: The number of scan cells in the DUT is 227 */ 
 
-  // 
+  // ----------------------------------------------------------------------
   // Signal list
-  //
+  // ----------------------------------------------------------------------
   reg                bist_pg_lfsr_shift  ;  // Tell the pattern  generation  LFSR to shift by 1
   reg                bist_rc_lfsr_shift  ;  // Tell the Response compression LFSR to shift by 1
   reg  [ 15 : 0 ]    bist_pg_lfsr_r      ;  // Pattern  generation  LFSR seq elements
   reg  [ 15 : 0 ]    bist_rc_lfsr_r      ;  // Response compression LFSR seq elements
   reg  [ 15 : 0 ]    bist_sig_ff_r       ;  // Signatures of the fault-free response for all 2000 patterns
   reg                bist_ld_sig_ff      ;  // Tell the fault-free signature register to update
-  wire [ 15 : 0 ]    bist_sig_ft         ;  // Signature  of the faulty response for the current pattern
+  wire [ 15 : 0 ]    bist_sig_ft         ;  // Signature of the potentially faulty response for the current pattern
 
   reg                bist_scan_cnt_inc   ;  // Tell the scan shift counter to increment
   reg                bist_patt_cnt_inc   ;  // Tell the pattern    counter to increment
   reg  [  7 : 0 ]    bist_scan_cnt_r     ;  // Scan shift counter
   reg  [ 10 : 0 ]    bist_patt_cnt_r     ;  // Pattern counter
-  reg                bist_scan_cnt_ok    ;  // Scan shift counter reaches the wrap-around point
-  reg                bist_patt_cnt_ok    ;  // Pattern counter    reaches the wrap-around point
-  reg                bist_ff_r           ;  // State indicating the current test is the fault-free test
-  reg  [  2 : 0 ]    bist_st_r           ;  // State controlling the BIST precedure
+  wire               bist_scan_cnt_ok    ;  // Scan shift counter reaches the wrap-around point
+  wire               bist_patt_cnt_ok    ;  // Pattern counter    reaches the wrap-around point
+
+  reg  [  1 : 0 ]    bist_ff_r           ;  // Fault-free controller state machine: 
+                                            // Indicating if the current BIST is the fault-free case
+  reg  [  2 : 0 ]    bist_st_r           ;  // Main state machine: 
+                                            // Controlling the BIST process
   reg  [  2 : 0 ]    bist_st_nxt         ;  // Next state of the main state machine
 
   reg                bistdone            ;  // Asserted when the BIST result is available
   reg                bistpass            ;  // A 1 indicates the BIST is passed, otherwise failed
   reg                cut_scanmode        ;  // Scan mode select signal to the CUT
 
-  //
+  // ----------------------------------------------------------------------
   // Parameters
-  //
+  // ----------------------------------------------------------------------
+  // Fault-free controller state machine states
+  parameter    FF_RST        =  2'b00  ; // State after the first reset
+  parameter    FF_FFY        =  2'b01  ; // Reach this state before the first BIST is done: 
+                                         // Indicating this is the fault-free case
+  parameter    FF_FFN        =  2'b11  ; // Remain in this sate after the first BIST is done: 
+                                         // Indicating this is a potentially faulty case
+
   // Main state machine states
   parameter    BIST_IDLE     =  3'b000 ; // Idle state, waiting for the BIST mode initiating signal
   parameter    BIST_APLY     =  3'b001 ; // Shifting in a test pattern to the CUT
   parameter    BIST_CAPT     =  3'b011 ; // Capture cycle
   parameter    BIST_CHCK     =  3'b111 ; // Shifting out the response of the test pattern, and compressing the response
+                                         // And shifting in the next pattern at the same time 
   parameter    BIST_EXIT     =  3'b110 ; // Finish the BIST by checking the signature 
 
-  //
+  // ----------------------------------------------------------------------
   // LFSR's
-  //
+  // ----------------------------------------------------------------------
   // 16-bit LFSR for pattern generation: x^16 + x^5 + x^4 + x^3 + 1 
   always @ ( posedge clk ) begin : pg_lfsr
     // Synchronous reset, active high 
@@ -80,7 +92,7 @@ module bist_hardware (
       bist_pg_lfsr_r [ 14 ] <= bist_pg_lfsr_r [ 13 ]                         ;
       bist_pg_lfsr_r [ 15 ] <= bist_pg_lfsr_r [ 14 ]                         ;
     end 
-  end : pg_lfsr
+  end 
 
   // Connect the scan data input to the pattern generator
   assign cut_sdi = bist_pg_lfsr_r [ 15 ] ; 
@@ -111,36 +123,34 @@ module bist_hardware (
       bist_rc_lfsr_r [ 14 ] <= bist_rc_lfsr_r [ 13 ]                         ;
       bist_rc_lfsr_r [ 15 ] <= bist_rc_lfsr_r [ 14 ]                         ;
     end 
-  end : rc_lfsr
+  end
 
   // The output of the response compression LFSR is the reponse signature
   assign bist_sig_ft = bist_rc_lfsr_r ;
 
-  // 
+  // ----------------------------------------------------------------------
   // Fault-free signature register 
-  //
+  // ----------------------------------------------------------------------
   always @ ( posedge clk ) begin 
-    if ( rst ) 
-      bist_sig_ff_r <= 16'd0 ;
-    else 
-      bist_sig_ff_r <= bist_ld_sig_ff ? bist_rc_lfsr_r : bist_sig_ff_r ; 
+    // Should not reset at the beginning of each BIST
+    bist_sig_ff_r <= bist_ld_sig_ff ? bist_rc_lfsr_r : bist_sig_ff_r ; 
   end 
 
-  // 
+  // ----------------------------------------------------------------------
   // Counters
-  //
-  // Scan shift counter (0 - 276, 8 bits)
-  assign bist_scan_cnt_ok = ( bist_scan_cnt_r == 8'd276 ) ;
+  // ----------------------------------------------------------------------
+  // Scan shift counter (0 - 226, 8 bits)
+  assign bist_scan_cnt_ok = ( bist_scan_cnt_r == 8'd226 ) ;
 
   always @ ( posedge clk ) begin 
     if ( rst ) 
       bist_scan_cnt_r <= 8'd0 ;
     // Wrap around 
-    else if ( bist_scan_cnt_ok ) 
+    else if ( bist_scan_cnt_ok && bist_scan_cnt_inc ) 
       bist_scan_cnt_r <= 8'd0 ;
     // Increment by 1 when scanning in or out
     else if ( bist_scan_cnt_inc )
-      bist_scan_cnt_r <= bist_scan_cnt_r + 1 ) ;
+      bist_scan_cnt_r <= bist_scan_cnt_r + 1 ;
     else 
       bist_scan_cnt_r <= bist_scan_cnt_r ;
   end 
@@ -152,29 +162,45 @@ module bist_hardware (
     if ( rst ) 
       bist_patt_cnt_r <= 11'd0 ;
     // Wrap around 
-    else if ( bist_patt_cnt_ok ) 
+    else if ( bist_patt_cnt_ok && bist_patt_cnt_inc ) 
       bist_patt_cnt_r <= 11'd0 ;
     // Increment by 1 when a pattern is captured into the CUT
     else if ( bist_patt_cnt_inc )
-      bist_patt_cnt_r <= bist_patt_cnt_r + 1 ) ;
+      bist_patt_cnt_r <= bist_patt_cnt_r + 1 ;
     else 
       bist_patt_cnt_r <= bist_patt_cnt_r ;
   end 
 
-  //
-  // State machines 
-  //
+  // ----------------------------------------------------------------------
+  // The fault-free controller state machine
+  // ----------------------------------------------------------------------
   // Determine if the current BIST is the fault-free case
+  
+  /* Note: This part won't work if you put this on silicon.
+   * You can never distinguish between the first reset and
+   * other resets since all states are UNKNOWN (which can
+   * be anything) during the first reset. I tried to make
+   * it work but later found out it will never work no
+   * matter what kind of state machine is used, as long
+   * as the system asserts reset each time a new BIST is
+   * initiated. */
+
   always @ ( posedge clk ) begin 
-    // The first BIST is the fault-free case, so reset to 1
+    // The first BIST is the fault-free case
     if ( rst ) 
-      bist_ff_r <= 1'b1 ; 
-    // Permanently set it to 0 after the first BIST is done
-    else if ( bist_done ) 
-      bist_ff_r <= 1'b0 ;
+      bist_ff_r <= FF_RST ; 
+    else if ( bist_ff_r == FF_RST && bist_st_nxt == BIST_EXIT ) 
+      bist_ff_r <= FF_FFY ;
+
+    // Permanently set it to FF_FFN after the first BIST is done
+    if ( bist_ff_r != FF_RST && bistdone ) 
+      bist_ff_r <= FF_FFN ;
   end 
 
+  // ----------------------------------------------------------------------
   // Main state machine 
+  // ----------------------------------------------------------------------
+  // Control the BIST process
   always @ ( * ) begin 
     // Default signal values
     bist_pg_lfsr_shift  =  1'b0      ; 
@@ -189,8 +215,9 @@ module bist_hardware (
 
     // States
     case ( bist_st_r ) 
+
       BIST_IDLE : begin 
-        bist_st_nxt = ( rst && bist_mode ) ? BIST_APLY : bist_st_r ;
+        bist_st_nxt = ( rst && bistmode ) ? BIST_APLY : bist_st_r ;
       end // BIST_IDLE
 
       BIST_APLY : begin 
@@ -207,111 +234,32 @@ module bist_hardware (
 
       BIST_CHCK : begin 
         bist_rc_lfsr_shift = 1'b1 ;
+        bist_pg_lfsr_shift = 1'b1 ;
         bist_scan_cnt_inc  = 1'b1 ;
         cut_scanmode       = 1'b1 ;
         if ( bist_scan_cnt_ok && bist_patt_cnt_ok ) 
           bist_st_nxt = BIST_EXIT ; 
         else if ( bist_scan_cnt_ok ) 
-          bist_st_nxt = BIST_APLY ; 
+          bist_st_nxt = BIST_CAPT ; 
         else 
           bist_st_nxt = bist_st_r ;
       end // BIST_CHCK
 
       BIST_EXIT : begin 
-        bist_ld_sig_ff = bist_ff_r ;
+        bist_ld_sig_ff = ( bist_ff_r == FF_FFY ) ;
         bistdone       = 1'b1      ; 
-        bistpass       = ( bist_ff_r || ( bist_sig_ft == bist_sig_ff_r ) ) ; 
+        bistpass       = ( bist_ff_r == FF_FFY || bist_sig_ft == bist_sig_ff_r ) ; 
       end // BIST_EXIT
     endcase 
   end 
 
   // State transition
   always @ ( posedge clk ) begin 
-    if ( rst ) 
-      bist_st_r <= BIST_IDLE   ; 
+    if ( rst && bistmode ) 
+      bist_st_r <= BIST_APLY   ; 
     else 
       bist_st_r <= bist_st_nxt ; 
   end 
-
-
-//*  // Previous unsynthesizable code
-//*  //
-//*  // Help tasks and functions
-//*  //
-//*  // Apply one scan pattern
-//*  task bist_apply_pat ( input int i ) ; 
-//*    // Initiate the scan mode
-//*    @ ( posedge clk ) 
-//*    cut_scanmode       <= 1'b1 ;
-//*    bist_pg_lfsr_shift <= 1'b1 ; 
-//*    // Scan in one pattern (277 cycles) 
-//*    repeat ( 277 ) @ ( posedge clk ) 
-//*    // Exit the scan mode
-//*    cut_scanmode       <= 1'b0 ;
-//*    bist_pg_lfsr_shift <= 1'b0 ; 
-//*    // Capture 
-//*    @ ( posedge clk ) 
-//*    // Scan out (277 cycles) 
-//*    cut_scanmode       <= 1'b1 ;
-//*    bist_rc_lfsr_shift <= 1'b1 ; 
-//*    repeat ( 277 ) @ ( posedge clk ) 
-//*    // Scan-out complete
-//*    cut_scanmode       <= 1'b0 ;
-//*    bist_rc_lfsr_shift <= 1'b0 ; 
-//*    // Store the signature(s)
-//*    @ ( posedge clk ) begin 
-//*      bist_sig_ft_r <= bist_rc_lfsr_r ;
-//*      // Store the fault-free signature if it is the first test
-//*      // The fist test is fault-free according to the project document
-//*      if ( bist_ff_r ) 
-//*        bist_sig_ff_r [ i ] <= bist_rc_lfsr_r ;
-//*    end 
-//*  endtask 
-//*
-//*  // Check the output signature against the fault-free one  
-//*  function int bist_check_sig ( int i ) ;
-//*    if ( bist_ff_r ) return 1 ; 
-//*    if ( bist_sig_ft_r != bist_sig_ff_r [ i ] ) return 0 ; 
-//*    else                                        return 1 ;
-//*  endfunction 
-//*
-//*  // Evaluate the signature and output the result
-//*  task bist_finish ( input int i ) ;
-//*    @ ( posedge clk ) 
-//*      bistdone <= 1'b1 ; 
-//*    @ ( posedge clk ) 
-//*      bistdone <= 1'b0 ; 
-//*  endtask 
-//*
-//*  // 
-//*  // Main routine 
-//*  //
-//*  initial begin 
-//*    while ( 1 ) begin 
-//*      // Synchronize the whole thing with clk 
-//*      // Wait until the BIST mode is initiated (not sure if Verilog supports the wait keyword) 
-//*      // When rst is asserted, the pattern generator is reset at the same time
-//*      forever @ ( posedge clk ) begin 
-//*        if ( bist_mode && rst ) begin 
-//*          // Clear the output signals on reset
-//*          bistdone     <= 1'b0 ; 
-//*          bistpass     <= 1'b0 ; 
-//*          cut_scanmode <= 1'b0 ;
-//*          break ; 
-//*        end 
-//*      end // forever @ ( posedge clk ) 
-//*
-//*      // Apply 2000 pseudo-random scan patterns
-//*      for ( int i = 0 ; i < 2000 ; i = i + 1 ) begin 
-//*        // Apply a scan pattern and store the response signature
-//*        bist_apply_pat ( i ) ;
-//*        // BIST is passed only if all 2000 patterns get the correct response
-//*        bistpass <= bistpass & ( bist_check_sig ( i ) ? 1'b1 : 1'b0 ) ;
-//*      end // for
-//*      // Evaluate the response signature and output the result
-//*      bist_finish ( i ) ;
-//*    end // while ( 1 ) 
-//*  end // initial 
 
 endmodule  
 
