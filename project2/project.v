@@ -247,8 +247,9 @@ module bist_hardware (
 
       BIST_EXIT : begin 
         bist_ld_sig_ff = ( bist_ff_r == FF_FFY ) ;
-        bistdone       = 1'b1      ; 
+        bistdone       = 1'b1 ; 
         bistpass       = ( bist_ff_r == FF_FFY || bist_sig_ft == bist_sig_ff_r ) ; 
+        bist_st_nxt    = BIST_IDLE ;
       end // BIST_EXIT
     endcase 
   end 
