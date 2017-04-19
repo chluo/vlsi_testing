@@ -1,3 +1,30 @@
+/***********************************************************************
+ * 
+ * EE 382M-1 VLSI Testing 
+ *
+ * Spring 2017 Project 1
+ *
+ *----------------------------------------------------------------------          
+ *
+ * Authors: Wenbo Xu
+ *          Chunheng Luo
+ *
+ *----------------------------------------------------------------------          
+ *
+ * Optimization Strategies: 
+ *
+ * 1. Used Parallel Pattern Signal Fault Simulation. Packed 16 patterns
+ *    in one 32-bit unsigned integer. Redefined LOGIC_0 as 1, LOGIC_1 
+ *    as 2 and LOGIC_X as 3 to speed up bit manipulation. 
+ *
+ * 2. Used Downstream Fault Simulation, where simulation is performed 
+ *    only on downstream gates from the faulty gate. For upstream gates, 
+ *    fault free values are assigned. 
+ *
+ * 3. Optimized away redundant pointer operations.  
+ *
+ **********************************************************************/
+
 #include "project.h"
 #include <stddef.h>
 #include <string.h>
@@ -82,31 +109,18 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
   pattern_t    *pat;
   fault_list_t *undetected_flist;
 {
-  int          p;  /* looping variable for pattern number */
-  int          i;
-  int          j; 
-  fault_list_t *fptr, *prev_fptr;
+  int          p;                  /* looping variable for pattern number */
+  int          i, j, k; 
   int          detected_flag;
-
-  /* printf("%d\n", sizeof(long long)); */
-
-  /* ----------------------------------------------------------------------
-   * fault-free simulation
-   * ------------------------------------------------------------------- */
+  fault_list_t *fptr, *prev_fptr;
 
   /* loop through all pattern groups (N_PARA patterns per group) */
-  for (p = 0; p < pat->len; p += N_PARA) {
-    /* printf("pattern #%d\n", p); */
-    /* printf("# of patterns: %d\n", pat->len); */
-    /* printf("# of PIs: %d\n", ckt->npi); */
-    /* initialize all gate values to UNDEFINED */
-    /*
-    for (i = 0; i < ckt->ngates; i++) {
-      ckt->gate[i].in_val[0] = 0;
-      ckt->gate[i].in_val[1] = 0;
-      ckt->gate[i].out_val   = 0;
-    }
-    */
+  for (p = 0/*, k = 0*/; p < pat->len; p += N_PARA/*, k += 1*/) {
+
+    /* ----------------------------------------------------------------------
+     * fault-free simulation
+     * ------------------------------------------------------------------- */
+
     /* assign primary input values for pattern */ 
     for (i = 0; i < ckt->npi; i++) {
       gate_t *cur_pi = & (ckt->gate[ckt->pi[i]]);
@@ -143,128 +157,108 @@ fault_list_t *three_val_fault_simulate(ckt,pat,undetected_flist)
       }
       /* compute gate output value */
       evaluate(cur_gate);
+      /* store fault free output values for each gate */ 
+      cur_gate->out_ff = cur_gate->out_val; 
     }
     /* put fault-free primary output values into pat data structure */
     for (i = 0; i < ckt->npo; i++) {
       gate_t *cur_po = & (ckt->gate[ckt->po[i]]); 
       for (j = 0; j < N_PARA && p + j < pat->len; j++) {
-        /* assert(((ckt->gate[ckt->po[i]].out_val >> (2 * j)) & 3) != 3); */
-        /*
-        if (((ckt->gate[ckt->po[i]].out_val >> (2 * j)) & 3) == 3) {
-          printf("%x\n", ckt->gate[ckt->gate[ckt->gate[ckt->po[i]].fanin[0]].fanin[0]].in_val[0]); 
-          printf("%x\n", ckt->gate[ckt->gate[ckt->gate[ckt->po[i]].fanin[0]].fanin[0]].in_val[1]); 
-          printf("%d\n", ckt->gate[ckt->gate[ckt->gate[ckt->po[i]].fanin[0]].fanin[0]].type); 
-        }
-        */
         pat->out[p + j][i] = ((cur_po->out_val >> (2 * j)) & 3) - 1; 
       }
     }
-  }
 
-  /* ----------------------------------------------------------------------
-   * fault simulation
-   * ------------------------------------------------------------------- */
+    /* ----------------------------------------------------------------------
+     * fault simulation
+     * ------------------------------------------------------------------- */
 
-  /* loop through all undetected faults */
-  prev_fptr = (fault_list_t *)NULL;
-  for (fptr=undetected_flist; fptr != (fault_list_t *)NULL; fptr=fptr->next) {
-    /* loop through all pattern groups (N_PARA patterns per group) */
-    detected_flag = FALSE;
-    for (p = 0; p < pat->len && !detected_flag; p += N_PARA) {
-      /* initialize all gate values to UNDEFINED */
-      /*
-      for (i = 0; i < ckt->ngates; i++) {
-        ckt->gate[i].in_val[0] = 0;
-        ckt->gate[i].in_val[1] = 0;
-        ckt->gate[i].out_val   = 0;
-      }
-      */
-      /* assign primary input values for pattern */ 
-      for (i = 0; i < ckt->npi; i++) {
-        gate_t *cur_pi = & (ckt->gate[ckt->pi[i]]);
-        cur_pi->out_val = 0; 
-        for (j = 0; j < N_PARA && p + j < pat->len; j++) 
-          cur_pi->out_val |= (pat->in[p + j][i] + 1) << (2 * j);
-      }
+    /* loop through all undetected faults */
+    prev_fptr = (fault_list_t *)NULL;
+    for (fptr = undetected_flist; fptr != (fault_list_t *)NULL; fptr=fptr->next) {
+      /* loop through all pattern groups (N_PARA patterns per group) */
+      detected_flag = FALSE;
       /* evaluate all gates */
       for (i = 0; i < ckt->ngates; i++) {
         gate_t *cur_gate = & (ckt->gate[i]); 
-        /* get gate input values */
-        switch ( ckt->gate[i].type ) {
-          /* gates with no input terminal */
-          case PI:
-          case PO_GND:
-          case PO_VCC:
-            break;
-          /* gates with one input terminal */
-          case INV:
-          case BUF:
-          case PO:
-            cur_gate->in_val[0] = ckt->gate[cur_gate->fanin[0]].out_val;
-            break;
-          /* gates with two input terminals */
-          case AND:
-          case NAND:
-          case OR:
-          case NOR:
-            cur_gate->in_val[0] = ckt->gate[cur_gate->fanin[0]].out_val;
-            cur_gate->in_val[1] = ckt->gate[cur_gate->fanin[1]].out_val;
-            break;
-          default:
-            assert(0);
+        /* assign fault-free output values of upstream gates */
+        if (i < fptr->gate_index || cur_gate->type == PI) {
+          cur_gate->out_val = cur_gate->out_ff;
         }
-        /* check if faulty gate */
-        if ( i == fptr->gate_index ) {
-          /* check if fault at input */
-          if ( fptr->input_index >= 0 ) {
-            /* inject fault */
-            if (fptr->type == S_A_0)
-              cur_gate->in_val[fptr->input_index] = BIT0_MASK; 
-            else 
-              cur_gate->in_val[fptr->input_index] = BIT1_MASK; 
+        /* faulty gate & downstream gates */
+        if (i >= fptr->gate_index) {
+          /* get gate input values */
+          switch ( ckt->gate[i].type ) {
+            /* gates with no input terminal */
+            case PI:
+            case PO_GND:
+            case PO_VCC:
+              break;
+            /* gates with one input terminal */
+            case INV:
+            case BUF:
+            case PO:
+              cur_gate->in_val[0] = ckt->gate[cur_gate->fanin[0]].out_val;
+              break;
+            /* gates with two input terminals */
+            case AND:
+            case NAND:
+            case OR:
+            case NOR:
+              cur_gate->in_val[0] = ckt->gate[cur_gate->fanin[0]].out_val;
+              cur_gate->in_val[1] = ckt->gate[cur_gate->fanin[1]].out_val;
+              break;
+            default:
+              assert(0);
+          }
+          /* check if faulty gate */
+          if ( i == fptr->gate_index ) {
+            /* check if fault at input */
+            if ( fptr->input_index >= 0 ) {
+              /* inject fault */
+              if (fptr->type == S_A_0)
+                cur_gate->in_val[fptr->input_index] = BIT0_MASK; 
+              else 
+                cur_gate->in_val[fptr->input_index] = BIT1_MASK; 
+              /* compute gate output value */
+              evaluate(cur_gate);
+            }
+            else { /* fault at output */
+              /* inject fault */
+              if (fptr->type == S_A_0)
+                cur_gate->out_val = BIT0_MASK; 
+              else 
+                cur_gate->out_val = BIT1_MASK; 
+            }
+          }
+          else { /* not faulty gate */
             /* compute gate output value */
             evaluate(cur_gate);
           }
-          else { /* fault at output */
-            /* evaluate(ckt->gate[i]); */
-            /* inject fault */
-            if (fptr->type == S_A_0)
-              cur_gate->out_val = BIT0_MASK; 
-            else 
-              cur_gate->out_val = BIT1_MASK; 
-          }
-        }
-        else { /* not faulty gate */
-          /* compute gate output value */
-          evaluate(cur_gate);
         }
       }
       /* check if fault detected */
       for (i = 0; i < ckt->npo; i++) {
         gate_t *cur_po = & (ckt->gate[ckt->po[i]]); 
-        for (j = 0; j < N_PARA && p + j < pat->len; j++) {
-          if ( (((cur_po->out_val >> (2 * j)) & 3) == LOGIC_0) && ( pat->out[p + j][i] == 1 )  
-            || (((cur_po->out_val >> (2 * j)) & 3) == LOGIC_1) && ( pat->out[p + j][i] == 0 ) ) {
-            detected_flag = TRUE; break; 
-          }
-        }
+        int res_xor = (cur_po->out_val) ^ (cur_po->out_ff); 
+        detected_flag = (((res_xor & BIT0_MASK) & ((res_xor >> 1) & BIT0_MASK)) != 0); 
         if (detected_flag) break; 
       }
-    }
-    /* fault dropping */ 
-    if ( detected_flag ) {
-      /* remove fault from undetected fault list */
-      if ( prev_fptr == (fault_list_t *)NULL ) {
-        /* if first fault in fault list, advance head of list pointer */
-        undetected_flist = fptr->next;
+      /* fault dropping */ 
+      if ( detected_flag ) {
+        /* remove fault from undetected fault list */
+        if ( prev_fptr == (fault_list_t *)NULL ) {
+          /* if first fault in fault list, advance head of list pointer */
+          undetected_flist = fptr->next;
+        }
+        else { /* if not first fault in fault list, then remove link */
+          prev_fptr->next = fptr->next;
+        }
       }
-      else { /* if not first fault in fault list, then remove link */
-        prev_fptr->next = fptr->next;
+      else { /* fault remains undetected, keep on list */
+        prev_fptr = fptr;
       }
-    }
-    else { /* fault remains undetected, keep on list */
-      prev_fptr = fptr;
     }
   }
   return(undetected_flist);
 }
+
