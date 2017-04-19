@@ -173,11 +173,21 @@ initial begin
    dobist;
    release testchip.circuit.II282;
 
+   force testchip.circuit.II1 = 1;
+   $write( "\nInjecting Fault into CUT:  testchip.circuit.II1 = 1\n" );
+   faults = faults+1;
+   dobist;
+   release testchip.circuit.II1;
+
    force testchip.circuit.n482gat = 0;
    $write( "\nInjecting Fault into CUT:  testchip.circuit.n482gat = 0\n" );
    faults = faults+1;
    dobist;
    release testchip.circuit.n482gat;
+
+   // Do the fault-free simulation again
+   $write( "\nInjecting [No Fault] into CUT:  Fault-Free BIST Simulation\n" );
+   dobist;
 
    force testchip.circuit.n226gat = 1;
    $write( "\nInjecting Fault into CUT:  testchip.circuit.n226gat = 1\n" );
@@ -185,11 +195,21 @@ initial begin
    dobist;
    release testchip.circuit.n226gat;
 
+   force testchip.circuit.n2110gat = 0;
+   $write( "\nInjecting Fault into CUT:  testchip.circuit.n2110gat = 0\n" );
+   faults = faults+1;
+   dobist;
+   release testchip.circuit.n2110gat;
+
    force testchip.circuit.n1275gat = 0;
    $write( "\nInjecting Fault into CUT:  testchip.circuit.n1275gat = 0\n" );
    faults = faults+1;
    dobist;
    release testchip.circuit.n1275gat;
+
+   // Do the fault-free simulation again
+   $write( "\nInjecting [No Fault] into CUT:  Fault-Free BIST Simulation\n" );
+   dobist;
 
    force testchip.circuit.n1582gat = 1;
    $write( "\nInjecting Fault into CUT:  testchip.circuit.n1582gat = 1\n" );
@@ -205,6 +225,18 @@ initial begin
 
    force testchip.circuit.n745gat = 1;
    $write( "\nInjecting Fault into CUT:  testchip.circuit.n745gat = 1\n " );
+   faults = faults+1;
+   dobist;
+   release testchip.circuit.n745gat;
+
+   force testchip.circuit.II171 = 0;
+   $write( "\nInjecting Fault into CUT:  testchip.circuit.II171 = 0\n " );
+   faults = faults+1;
+   dobist;
+   release testchip.circuit.II171;
+
+   force testchip.circuit.n745gat = 0;
+   $write( "\nInjecting Fault into CUT:  testchip.circuit.n745gat = 0\n " );
    faults = faults+1;
    dobist;
    release testchip.circuit.n745gat;
@@ -225,11 +257,29 @@ initial begin
    dobist;
    release testchip.circuit.II4623;
 
+   force testchip.circuit.n1551gat = 0;
+   $write( "\nInjecting Fault into CUT:  testchip.circuit.n1551gat = 0\n " );
+   faults = faults+1;
+   dobist;
+   release testchip.circuit.n1551gat;
+
    force testchip.circuit.II4759 = 0;
    $write( "\nInjecting Fault into CUT:  testchip.circuit.II4759 = 0\n " );
    faults = faults+1;
    dobist;
    release testchip.circuit.II4759;
+
+   force testchip.circuit.II4759 = 1;
+   $write( "\nInjecting Fault into CUT:  testchip.circuit.II4759 = 1\n " );
+   faults = faults+1;
+   dobist;
+   release testchip.circuit.II4759;
+
+   force testchip.circuit.n2624gat = 0;
+   $write( "\nInjecting Fault into CUT:  testchip.circuit.n2624gat = 0\n " );
+   faults = faults+1;
+   dobist;
+   release testchip.circuit.n2624gat;
 
    // Do the fault-free simulation again
    $write( "\nInjecting [No Fault] into CUT:  Fault-Free BIST Simulation\n" );
