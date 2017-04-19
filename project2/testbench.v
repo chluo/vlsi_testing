@@ -84,7 +84,7 @@ assign _cut_po = { pin_41_, pin_42_,
 	.bistdone( pin_1_ ),
 	.bistpass( pin_2_ )
    );
-   	
+
    always #(cycle / 2) _clk = ~_clk; //clock generator
 
 //For fault free simulation: display PI and PO values
@@ -164,7 +164,7 @@ initial begin
 //   faultfree;                            //Fault free simulation
 
    //Fault Injection
-   $write( "\nInjecting No Fault into CUT:  Fault-Free BIST Simulation\n" );
+   $write( "\nInjecting [No Fault] into CUT:  Fault-Free BIST Simulation\n" );
    dobist;
 
    force testchip.circuit.II282 = 1;
@@ -215,6 +215,10 @@ initial begin
    dobist;
    release testchip.circuit.n1794gat;
 
+   // Do the fault-free simulation again
+   $write( "\nInjecting [No Fault] into CUT:  Fault-Free BIST Simulation\n" );
+   dobist;
+
    force testchip.circuit.II4623 = 1;
    $write( "\nInjecting Fault into CUT:  testchip.circuit.II4623 = 1\n " );
    faults = faults+1;
@@ -226,6 +230,10 @@ initial begin
    faults = faults+1;
    dobist;
    release testchip.circuit.II4759;
+
+   // Do the fault-free simulation again
+   $write( "\nInjecting [No Fault] into CUT:  Fault-Free BIST Simulation\n" );
+   dobist;
 
    $write("\nInjected %d faults\n", faults);
    $write("Detected %d faults\n", detected_faults);

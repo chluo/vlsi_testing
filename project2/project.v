@@ -49,19 +49,19 @@ module bist_hardware (
   // Parameters
   // ----------------------------------------------------------------------
   // Fault-free controller state machine states
-  parameter    FF_RST        =  2'b00  ; // State after the first reset
-  parameter    FF_FFY        =  2'b01  ; // Reach this state before the first BIST is done: 
-                                         // Indicating this is the fault-free case
-  parameter    FF_FFN        =  2'b11  ; // Remain in this sate after the first BIST is done: 
-                                         // Indicating this is a potentially faulty case
+  parameter    FF_RST        =  2'b00    ; // State after the first reset
+  parameter    FF_FFY        =  2'b01    ; // Reach this state before the first BIST is done: 
+                                           // Indicating this is the fault-free case
+  parameter    FF_FFN        =  2'b11    ; // Remain in this sate after the first BIST is done: 
+                                           // Indicating this is a potentially faulty case
 
   // Main state machine states
-  parameter    BIST_IDLE     =  3'b000 ; // Idle state, waiting for the BIST mode initiating signal
-  parameter    BIST_APLY     =  3'b001 ; // Shifting in a test pattern to the CUT
-  parameter    BIST_CAPT     =  3'b011 ; // Capture cycle
-  parameter    BIST_CHCK     =  3'b111 ; // Shifting out the response of the test pattern, and compressing the response
-                                         // And shifting in the next pattern at the same time 
-  parameter    BIST_EXIT     =  3'b110 ; // Finish the BIST by checking the signature 
+  parameter    BIST_IDLE     =  3'b000   ; // Idle state, waiting for the BIST mode initiating signal
+  parameter    BIST_APLY     =  3'b001   ; // Shifting in a test pattern to the CUT
+  parameter    BIST_CAPT     =  3'b011   ; // Capture cycle
+  parameter    BIST_CHCK     =  3'b111   ; // Shifting out the response of the test pattern, and compressing the response
+                                           // And shifting in the next pattern at the same time 
+  parameter    BIST_EXIT     =  3'b110   ; // Finish the BIST by checking the signature 
 
   // ----------------------------------------------------------------------
   // LFSR's
